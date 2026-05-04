@@ -732,8 +732,8 @@ class FriendManager {
             "total": 00.00
         }`;
 
-
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_API_KEY}`;
+        const model = 'gemini-flash-latest';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API_KEY}`;
        
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -818,5 +818,11 @@ class FriendManager {
 }
 
 
-// Initialize the friend manager when the document is ready
+const hashParams = new URLSearchParams(window.location.hash.slice(1));
+const urlKey = hashParams.get('key');
+if (urlKey) {
+    localStorage.setItem('apiKey', urlKey);
+    history.replaceState(null, '', window.location.pathname);
+}
+
 const friendManager = new FriendManager();
