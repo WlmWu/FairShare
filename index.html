@@ -1,107 +1,184 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Enjoy meals with friends but tired of calculating and splitting the bill? Try Shareceipt! A simple, intuitive tool requires no registration and handles tax, service charges, and other additional fees effortlessly. Calculate and share expenses with ease using Shareceipt!" />
+    <meta name="description" content="Enjoy meals with friends but tired of calculating and splitting the bill? Try Shareceipt! A simple, intuitive tool requires no registration and handles tax, service charges, and other additional fees effortlessly." />
     <title>Shareceipt: Quick and Easy Expense Sharing</title>
-    <link rel="stylesheet" href="styles.css">
 
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-
-
 </head>
 <body>
-    <div class="container text-center">
-        <!-- Content here -->
-    <h1 class="body-title mb-1">Shareceipt</h1>
-    <h5 class="body-second-title  mb-3">Quick and Easy Expense Sharing</h5>
-    
-    <div id="friends-section">
-        <!-- <h3>朋友設定</h3> -->
-        <div id="friends-list">
-            <div class="friend">
+    <!-- Responsive App Container -->
+    <div class="app-container">
+        <!-- App Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="logo-icon"><i class="fa-solid fa-receipt"></i></span>
+                <div class="logo-text-group">
+                    <h1 class="logo-title">Shareceipt</h1>
+                    <span class="logo-subtitle">Quick and Easy Expense Sharing</span>
+                </div>
             </div>
-        </div>
-        <button class="button-28" id="add-friend" ontouchstart=""><i class="fa-solid fa-user-plus"></i> Friend</button>
-    </div>
-    
-    <div id="bill-section">        
-        <!-- <h3>項目清單</h3> -->
-        <div class="line"></div>
-
-        <div class="upload-container my-3">
-            <button class="button-64" id="receipt-upload-btn" role="button">
-                <span class="text">
-                    <i class="fa-solid fa-arrow-up-from-bracket"></i>
-                    <i class="fa-solid fa-spinner fa-spin" style="display: none;"></i> 
-                    &nbsp;Receipt
-                </span>
+            <button class="info-btn-circle" title="App Info">
+                <i class="fa-solid fa-circle-info"></i>
             </button>
-            <input type="file" id="receipt-upload-input" style="display: none;" accept="image/*">
-            <button id="update-api-key-btn"><i class="fa-solid fa-key"></i></button>
-        </div>
+        </header>
 
-        <div id="items-list"></div>
-        
-        <button class="button-28" id="add-item" ontouchstart=""><i class="fa-solid fa-cart-plus" style="font-size: 1.18em;"></i> Item</button>
-
-        <div class="item total-amount-container mt-3">
-            <button class="collapse-btn" data-bs-toggle="collapse" data-bs-target="#detail-amount-container" aria-expanded="true" aria-controls="total-amount-container">
-                <i class="fa-solid fa-angle-right" style="font-size: 24px;"></i>
-                <i class="fa-solid fa-angle-down" style="font-size: 24px; display: none;"></i>
-            </button>
-            <div id="total-amount-title" style="font-weight: bolder; font-size: larger; padding-left: 0.5em;">Total Amount&emsp;$
-                <span id="total-amount"></span>
+        <!-- Card 1: Scan / New Split Bill -->
+        <section class="app-card">
+            <div class="card-header-bar">
+                Use your API key to scan
+                <button id="update-api-key-btn" title="Update API Key" class="key-badge-btn">
+                    <i class="fa-solid fa-key"></i>
+                </button>
             </div>
-            <div class="collapse" id="detail-amount-container">
-                <div class="mt-2" style="font-weight: bolder;">
-                    <!-- <label for="subtotal-amount">Subtotal Amount&emsp;</label> -->
-                    <!-- <input type="number" id="subtotal-amount" min="0" step="1" placeholder="(optional)"> -->
-                    Subtotal Amount&emsp;$<span id="subtotal-amount"></span>
+            <div class="card-body text-center">
+                <div class="new-split-bill-hero">
+                    <div class="hero-camera-circle">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <h3 class="hero-title">New Split Bill</h3>
+                    <p class="hero-subtitle">Upload a receipt or create a manual entry</p>
                 </div>
-                <div class="mt-2">
-                    <label for="total-amount-additional" style="font-weight: bolder; font-size: smaller;">Additional Fee&emsp;</label>
-                    <input type="number" id="total-amount-additional" min="0" step="0.1" placeholder="0.0"> %
-                </div>
-                <div class="mytooltip pt-2 pb-1 px-3" id="total-amount-tooltip">
-                    <i class="fa-regular fa-circle-question"></i>
-                    <span class="tooltiptext">
-                        Total = Subtotal × (1 + Fee)
-                    </span>
-                </div>
-                <div class="mb-3" style="font-weight: bolder; font-size: large;">Total Amount&emsp;
-                    <input type="number" id="total-amount-input" min="0" step="1" placeholder="">
+
+                <div class="action-buttons-row">
+                    <button class="btn-primary" id="receipt-upload-btn" role="button">
+                        <span class="btn-content">
+                            <i class="fa-solid fa-camera"></i>
+                            <i class="fa-solid fa-spinner fa-spin" style="display: none;"></i>
+                            &nbsp;Upload
+                        </span>
+                    </button>
+                    <input type="file" id="receipt-upload-input" style="display: none;" accept="image/*">
+
+                    <button class="btn-outline" id="manual-entry-btn">
+                        <span class="btn-outline-icon"><i class="fa-solid fa-plus"></i></span>
+                        &nbsp;Manual
+                    </button>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <div class="line"></div>
-    
-    <div id="results" class="m-3 py-4">
-        <h5>Each Person's Share</h5>
-        <span id="results-alert" class="alert-message" style="color: red;"></span>
-        <div id="results-output"></div>
-        <div id="settlement-section" class="collapse">
-            <div class="line my-3"></div>
-            <h5>Settlement</h5>
-            <span id="settlement-alert" class="alert-message" style="color: red;"></span>
-            <div id="settlement-paid-inputs"></div>
-            <div id="settlement-output" class="mt-3"></div>
-        </div>
-        <div class="mt-4">
-            <button id="settlement-toggle-btn" ontouchstart="" data-bs-toggle="collapse" data-bs-target="#settlement-section" style="background-color: transparent; color: black; display: inline;"><i class="fa-solid fa-money-bill-transfer"></i></button>
-            <button id="share-result-btn" ontouchstart="" style="background-color: transparent; color: black; display: inline;"><i class="fa-solid fa-share-nodes"></i></button>
-        </div>
+        </section>
+
+        <!-- Card 2: Friends / Add Contact -->
+        <section class="app-card" id="friends-section">
+            <div class="card-header-bar">Friends</div>
+            <div class="card-body">
+                <div class="friends-scroll-wrapper">
+                    <div id="friends-list">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+                    <button id="add-friend" class="avatar-add-btn">
+                        <div class="avatar-circle-add">
+                            <i class="fa-solid fa-user-plus"></i>
+                        </div>
+                        <span class="add-label">Add</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Card 3: Shares / Item List -->
+        <section class="app-card" id="bill-section">
+            <div class="card-header-bar">Shares</div>
+            <div class="card-body">
+                <div id="items-list">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <button id="add-item" class="btn-add-item">
+                    <span class="plus-circle-green"><i class="fa-solid fa-plus"></i></span>
+                    &nbsp;Add
+                </button>
+
+                <!-- Summary block inside the card -->
+                <div class="item total-amount-container mt-4">
+                    <div class="summary-toggle-header">
+                        <button class="collapse-btn" data-bs-toggle="collapse" data-bs-target="#detail-amount-container" aria-expanded="true" aria-controls="detail-amount-container">
+                            <i class="fa-solid fa-angle-right" style="font-size: 20px;"></i>
+                            <i class="fa-solid fa-angle-down" style="font-size: 20px; display: none;"></i>
+                        </button>
+                        <div id="total-amount-title" class="summary-amount-title">
+                            Total Amount&emsp;<span class="currency-symbol">$</span><span id="total-amount">0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="collapse show" id="detail-amount-container">
+                        <div class="summary-detail-row">
+                            <span class="detail-label">Subtotal Amount</span>
+                            <span class="detail-value">$<span id="subtotal-amount">0.00</span></span>
+                        </div>
+                        <div class="summary-detail-row align-items-center">
+                            <label for="total-amount-additional" class="detail-label m-0">Additional Fee</label>
+                            <div class="fee-input-wrapper">
+                                <input type="number" id="total-amount-additional" min="0" step="0.1" placeholder="0.0">
+                                <span class="fee-percentage-sign">%</span>
+                            </div>
+                        </div>
+                        <div class="summary-detail-row justify-content-center py-1">
+                            <div class="mytooltip" id="total-amount-tooltip">
+                                <i class="fa-regular fa-circle-question"></i> Help
+                                <span class="tooltiptext">
+                                    <strong>Total Amount:</strong> Subtotal × (1 + Additional Fee).<br><br>
+                                    <strong>Usage:</strong><br>
+                                    - <strong>Before Checkout:</strong> Enter the additional fee and leave total blank.<br>
+                                    - <strong>After Checkout:</strong> Enter the total and leave additional fee blank.
+                                </span>
+                            </div>
+                        </div>
+                        <div class="summary-detail-row align-items-center border-top pt-3 mt-2">
+                            <span class="detail-label font-bold">Total Amount Input</span>
+                            <div class="total-input-wrapper">
+                                <span class="currency-prefix">$</span>
+                                <input type="number" id="total-amount-input" min="0" step="1" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Card 4: Split / Results -->
+        <section class="app-card" id="results">
+            <div class="card-header-bar">Split</div>
+            <div class="card-body">
+                <span id="results-alert" class="alert-text"></span>
+                <div id="results-output" class="results-list">
+                    <!-- Populated dynamically by JS -->
+                </div>
+                <div id="settlement-section" class="collapse">
+                    <div class="section-divider"></div>
+                    <h5>Settlement</h5>
+                    <span id="settlement-alert" class="alert-text"></span>
+                    <div id="settlement-paid-inputs"></div>
+                    <div id="settlement-output" class="mt-3"></div>
+                </div>
+
+                <div class="result-actions">
+                    <button id="settlement-toggle-btn" class="btn-share-action" ontouchstart="" data-bs-toggle="collapse" data-bs-target="#settlement-section">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                        &nbsp;Settle
+                    </button>
+                    <button id="share-result-btn" class="btn-share-action">
+                        <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                        &nbsp;Share
+                    </button>
+                </div>
+            </div>
+        </section>
     </div>
 
+    <!-- Hidden JQuery load -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="script.js"></script>
-    </div>
-
 </body>
 </html>
