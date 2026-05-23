@@ -26,7 +26,7 @@
             <div class="friend">
             </div>
         </div>
-        <button class="button-28" id="add-friend" ontouchstart="">+ Friend</button>
+        <button class="button-28" id="add-friend" ontouchstart=""><i class="fa-solid fa-user-plus"></i> Friend</button>
     </div>
     
     <div id="bill-section">        
@@ -47,7 +47,7 @@
 
         <div id="items-list"></div>
         
-        <button class="button-28" id="add-item" ontouchstart="">+ Item</button>
+        <button class="button-28" id="add-item" ontouchstart=""><i class="fa-solid fa-cart-plus" style="font-size: 1.18em;"></i> Item</button>
 
         <div class="item total-amount-container mt-3">
             <button class="collapse-btn" data-bs-toggle="collapse" data-bs-target="#detail-amount-container" aria-expanded="true" aria-controls="total-amount-container">
@@ -70,10 +70,7 @@
                 <div class="mytooltip pt-2 pb-1 px-3" id="total-amount-tooltip">
                     <i class="fa-regular fa-circle-question"></i>
                     <span class="tooltiptext">
-                        <strong>Total Amount:</strong> Subtotal × (1 + Additional Fee).<br><br>
-                        <strong>Usage:</strong><br>
-                        - <strong>Before Checkout:</strong> Enter the additional fee and leave total blank.<br>
-                        - <strong>After Checkout:</strong> Enter the total and leave additional fee blank.
+                        Total = Subtotal × (1 + Fee)
                     </span>
                 </div>
                 <div class="mb-3" style="font-weight: bolder; font-size: large;">Total Amount&emsp;

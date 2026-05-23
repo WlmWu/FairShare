@@ -293,8 +293,8 @@ class FriendManager {
             const itemID = parseInt($(e.target).closest('.item').data('id'));
             const titleDiv = `
                 <div class="container-flex-space" style="padding: 0 20%">
-                    <span>${$name ? $name : "&emsp;"}</span>
-                    <span>${$amount ? `$ ${$amount}` : "&emsp;"}</span>
+                    <span class="item-head-name">${$name ? $name : "&emsp;"}</span>
+                    <span class="item-head-amount">${$amount ? `$ ${$amount}` : "&emsp;"}</span>
                 </div>
                 `;
             $head.html(titleDiv);
@@ -486,7 +486,7 @@ class FriendManager {
                                     `<span class="result-output-detail" style="background-color:${friend.rgbString}">
                                         <div class="container-flex-space result-output-detail-topic">
                                             <h5 style="color:rgb(255, 254, 251); display: inline;"><small>${friend.name}'s Item Summary</small></h5> 
-                                            <i class="fa-regular fa-clipboard" id="copy-btn-${fid}"></i>
+                                            <i class="fa-regular fa-copy" id="copy-btn-${fid}"></i>
                                         </div>
                                         ${
                                             Array.from(results.get(fid).items.entries()).map(([itemID, percentage]) => {
@@ -495,8 +495,8 @@ class FriendManager {
                                                     const itemName = (item.name === null || item.name === undefined || item.name.trim() === '') ? '&lt;Unnamed&gt;' : item.name;
                                                     const itemAmount = (item.amount * percentage) * (totalAmount/originalAmount);
                                                     return `<div class="result-output-friend-item container-flex-space">
-                                                            <span>${itemName}</span>
-                                                            <span>$${itemAmount.toFixed(2)}</span>
+                                                            <span class="item-head-name">${itemName}</span>
+                                                            <span class="item-head-amount">$${itemAmount.toFixed(2)}</span>
                                                         </div>`
                                                 }
                                                 return '';

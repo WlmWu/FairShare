@@ -289,7 +289,7 @@ button {
 .mytooltip .tooltiptext {
     visibility: hidden;
     display: none;
-    width: 84vw;
+    width: 58vw;
     background-color: black;
     color: #fff;
     text-align: center;
@@ -299,7 +299,7 @@ button {
     z-index: 1;
     top: 100%;
     left: 50%;
-    margin-left: -42vw;
+    margin-left: -29vw;
 }
 
 .mytooltip .tooltiptext::after {
@@ -348,17 +348,34 @@ button {
     justify-content: space-between;
 }
 
+.item-head-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: left;
+}
+
+.item-head-amount {
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-left: 0.5em;
+}
+
 .result-output-detail .result-output-detail-topic {
     padding: 0 15%;
 }
 
-.result-output-detail .result-output-detail-topic .fa-clipboard, .result-output-detail .result-output-detail-topic .fa-check {
-    margin-top: 0.26em;
+.result-output-detail .result-output-detail-topic .fa-copy, .result-output-detail .result-output-detail-topic .fa-check {
+    margin-top: 0.36em;
 }
 
 @media (min-width: 768px) {
     .result-output-detail .result-output-detail-topic {
         padding: 0 30%;
+    }
+    .mytooltip .tooltiptext {
+        width: 30vw;
+        margin-left: -15vw;
     }
 }
 
@@ -370,6 +387,10 @@ button {
     .result-output-detail .result-output-detail-topic {
         padding: 0 20%;
     }
+    .mytooltip .tooltiptext {
+        width: 20vw;
+        margin-left: -10vw;
+    }
 }
 
 @media (min-width: 1366px) {
@@ -379,6 +400,10 @@ button {
     }
     .result-output-detail .result-output-detail-topic {
         padding: 0 31.5%;
+    }
+    .mytooltip .tooltiptext {
+        width: 16vw;
+        margin-left: -8vw;
     }
 }
 
