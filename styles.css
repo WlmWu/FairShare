@@ -208,7 +208,7 @@ button {
     background-color: #f5f5f5;
     border-radius: 6px;
     display: inline-block;
-    width: 80%;
+    width: 90%;
     border: 2px solid black;
 }
 
@@ -219,7 +219,7 @@ button {
     font-family: 'Trebuchet MS', sans-serif;
 }
 
-#results-alert {
+.alert-message {
     display: block;
     margin-bottom: 10px;
     font-size: 14px;
@@ -248,7 +248,7 @@ button {
     display: none;
 }
 
-#results #share-result-btn {
+#results #share-result-btn, #results #settlement-toggle-btn {
     color: #333;
     font-size: 1.2em;
 }
@@ -606,5 +606,74 @@ button {
     }
     .total-amount-container .collapse-btn {
         left: 0;
+    }
+}
+
+#settlement-section h5 {
+    font-weight: 600;
+    font-family: 'Trebuchet MS', sans-serif;
+    color: #333;
+}
+
+.settlement-paid-row {
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    padding: 0.2em 0;
+}
+
+.settlement-paid-row .settlement-paid-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0 !important;
+    cursor: pointer;
+}
+
+.settlement-paid-row .result-output-friend, .settlement-transfer .result-output-friend {
+    min-width: auto;
+    text-align: center;
+    padding: 6px 14px;
+    font-size: 14px;
+    border-width: 1.5px;
+}
+
+.settlement-paid-row input[type="checkbox"] {
+    display: none;
+}
+
+.settlement-paid-row input[type="number"] {
+    width: 90px;
+    display: inline;
+}
+
+.settlement-paid-row input[disabled] {
+    pointer-events: none;
+}
+
+.settlement-paid-row:has(.settlement-checkbox:not(:checked)) .friend-name {
+    opacity: 0.4;
+}
+
+.settlement-transfer {
+    font-size: 15px;
+    padding: 6px 0;
+}
+
+.settlement-amount {
+    font-weight: 600;
+}
+
+.settlement-transfer .settlement-amount {
+    margin-left: 0.8em;
+}
+
+@media (max-width: 401px) {
+    .settlement-transfer .settlement-amount {
+        display: block;
+        margin: 0.2em 0.2em 0.2em 0.2em;
+    }
+    .settlement-transfer .settlement-amount {
+        margin-top: 0.5em;
     }
 }

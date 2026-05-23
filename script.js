@@ -12,29 +12,21 @@ function isTouchDevice() {
 
 class Friend {
     static nextId = 1;
+    static hueOffset = Math.random() * 360;
 
     constructor(name) {
         this.id = Friend.nextId++;
         this.name = name;
-        this.rgb = this.generateRandomRgb();
+        this.hsl = this.generateColor();
     }
     
-    generateRandomRgb() {
-        // Helper function to generate a random integer between min and max
-        const getRandomIntInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-        const values = [
-            getRandomIntInRange(50, 150),
-            getRandomIntInRange(30, 100),
-        ];
-        values.push(Math.min(220, 350 - values[0] - values[1]));
-        values.sort(() => Math.random() - 0.5);
-
-        return { r: values[0], g: values[1], b: values[2] };
+    generateColor() {
+        const hue = (Friend.hueOffset + this.id * 137.508) % 360; // use golden angle approximation to distribute hues
+        return { h: Math.round(hue), s: 55, l: 42 };
     }
 
     get rgbString() {
-        return `rgb(${this.rgb.r}, ${this.rgb.g}, ${this.rgb.b})`;
+        return `hsl(${this.hsl.h}, ${this.hsl.s}%, ${this.hsl.l}%)`;
     }
 }
 
@@ -158,6 +150,7 @@ class FriendManager {
         });
 
         this.bindFriendEvents();
+        this.updateSettlementFriends();
         this.updateItemFriends();
     }
 
@@ -462,7 +455,9 @@ class FriendManager {
         const totalAmount = (value => isNaN(value) ? (originalAmount * (1 + additionalAmount)) : value)(parseFloat($('#total-amount-input').val()));
 
         this.showResult(originalAmount, totalAmount, results);
-        return [originalAmount, totalAmount, results];
+        const transfers = this.calculateSettlement(totalAmount, results);
+        this.showSettlement(transfers);
+        return [originalAmount, totalAmount, results, transfers];
     }
 
     showResult(originalAmount, totalAmount, results) {
@@ -578,15 +573,22 @@ class FriendManager {
     }
 
     getShareResults() {
-        const [_, totalAmount, results] = this.calculate();
+        const [_, totalAmount, results, transfers] = this.calculate();
         const resultTotal = Array.from(results.values()).reduce((accumulator, currentValue) => accumulator + currentValue.total, 0);
 
-        let resStr = `💵 Total is $${(totalAmount).toFixed(2)} 💵\n\n`;
+        let resStr = `💵 Total is $${(totalAmount).toFixed(2)} 💵\n`;
         this.friends.forEach((friend, fid) => {
             const owedPercent = results.get(fid).total / resultTotal;
             const totalAmountOwed = totalAmount * owedPercent;
             resStr = resStr.concat(`👉 ${friend.name}:\n  $${isNaN(totalAmountOwed) ? 0 : totalAmountOwed.toFixed(2)}\t(${isNaN(owedPercent) ? 0 : (owedPercent*100).toFixed(4)}%)\n`);
         });
+
+        if ($('#settlement-section').hasClass('show') && transfers && transfers.length > 0) {
+            resStr += `\n💸 Settlement 💸\n`;
+            transfers.forEach(t => {
+                resStr += `${t.from} → ${t.to}  $${t.amount.toFixed(2)}\n`;
+            });
+        }
 
         return resStr;
     }
@@ -656,7 +658,7 @@ class FriendManager {
                 const res = this.getShareResults();
                 const shareData = {
                     title: 'Share the results!',
-                    text: `🍣 Each Person's Share 🌮\n\n${res}`,
+                    text: `🍣 Each Person's Share 🌮\n${res}`,
                     url: document.location.href
                 };
                 await navigator.share(shareData)
@@ -687,6 +689,124 @@ class FriendManager {
         $('#update-api-key-btn').on('click', () => {
             this.setGeminiKey();
         });
+    }
+
+    updateSettlementFriends() {
+        const savedValues = new Map();
+        const savedChecked = new Map();
+        $('.settlement-paid').each((_, el) => {
+            const fid = parseInt($(el).data('fid'));
+            const val = $(el).val();
+            if (val !== '') savedValues.set(fid, val);
+            const checkbox = $(el).closest('.settlement-paid-row').find('input[type="checkbox"]');
+            if (checkbox.length) savedChecked.set(fid, checkbox[0].checked);
+        });
+
+        const container = $('#settlement-paid-inputs');
+        container.empty();
+        this.friends.forEach((friend, fid) => {
+            const saved = savedValues.get(fid);
+            const isFirst = container.children().length === 0;
+            const checked = savedChecked.has(fid) ? savedChecked.get(fid) : isFirst;
+            container.append(`
+                <div class="settlement-paid-row">
+                    <input type="checkbox" id="settlement-check-${fid}" class="settlement-checkbox" data-fid="${fid}" ${checked ? 'checked' : ''}>
+                    <label for="settlement-check-${fid}" class="settlement-paid-label">
+                        <span class="friend-name result-output-friend" style="background-color:${friend.rgbString};">${friend.name}</span>
+                        <span>paid $</span>
+                        <input type="number" class="settlement-paid" data-fid="${fid}" min="0" step="0.01" ${!checked ? 'disabled placeholder="0"' : ''} ${saved !== undefined && checked ? `value="${saved}"` : ''}>
+                    </label>
+                </div>
+            `);
+        });
+        $('.settlement-paid').off('input').on('input', () => this.calculate());
+        $('.settlement-checkbox').off('change').on('change', (e) => {
+            const fid = parseInt($(e.target).data('fid'));
+            const checked = e.target.checked;
+            const input = $(`.settlement-paid[data-fid="${fid}"]`);
+            input[0].disabled = !checked;
+            input.val('');
+            input.attr('placeholder', checked ? '' : '0');
+            if (checked) input.focus();
+            this.calculate();
+        });
+    }
+
+    calculateSettlement(totalAmount, results) {
+        if (totalAmount === undefined) return [];
+        const resultTotal = Array.from(results.values()).reduce((acc, v) => acc + v.total, 0);
+        $('#settlement-alert').html('');
+
+        const inputs = $('.settlement-paid');
+        let totalFilled = 0;
+        let emptyCount = 0;
+        inputs.each((_, el) => {
+            const checkbox = $(el).closest('.settlement-paid-row').find('.settlement-checkbox')[0];
+            if (!checkbox.checked) return;
+            const val = parseFloat($(el).val());
+            if (!isNaN(val)) {
+                totalFilled += val;
+            } else {
+                emptyCount++;
+            }
+        });
+        const remain = totalAmount - totalFilled;
+        if (remain < 0) {
+            $('#settlement-alert').html(`[Error] The total paid amount exceed the total amount by $${(-remain).toFixed(2)}.`);
+        } else if (remain > 0 && emptyCount === 0) {
+            $('#settlement-alert').html(`[Error] The total paid amount is less than the total amount by $${remain.toFixed(2)}.`);
+        }
+        const placeholderVal = emptyCount > 0 ? Math.max(0, remain / emptyCount) : 0;
+        inputs.each((_, el) => {
+            const checkbox = $(el).closest('.settlement-paid-row').find('.settlement-checkbox')[0];
+            if ($(el).val() === '' && checkbox.checked) {
+                $(el).attr('placeholder', placeholderVal.toFixed(2));
+            }
+        });
+        const balances = [];
+        this.friends.forEach((friend, fid) => {
+            const owedPercent = resultTotal > 0 ? results.get(fid).total / resultTotal : 0;
+            const share = totalAmount * owedPercent;
+            const input = $(`.settlement-paid[data-fid="${fid}"]`);
+            const checkbox = input.closest('.settlement-paid-row').find('.settlement-checkbox')[0];
+            const paid = !checkbox.checked ? 0 : (input.val() !== '' ? parseFloat(input.val()) : placeholderVal);
+            balances.push({ fid, name: friend.name, rgb: friend.rgbString, balance: paid - share });
+        });
+
+        balances.sort((a, b) => a.balance - b.balance);
+
+        const transfers = [];
+        let i = 0, j = balances.length - 1;
+        while (i < j) {
+            const debtor = balances[i];
+            const creditor = balances[j];
+            if (isNaN(debtor.balance) || isNaN(creditor.balance)) break;
+            const amount = Math.min(-debtor.balance, creditor.balance);
+            if (amount > 0.01) {
+                transfers.push({ from: debtor.name, fromRgb: debtor.rgb, to: creditor.name, toRgb: creditor.rgb, amount });
+            }
+            debtor.balance += amount;
+            creditor.balance -= amount;
+            if (Math.abs(debtor.balance) < 0.01) i++;
+            if (Math.abs(creditor.balance) < 0.01) j--;
+        }
+        return transfers;
+    }
+
+    showSettlement(transfers) {
+        const output = $('#settlement-output');
+        output.empty();
+        if (!$('#settlement-alert').html()) {
+            if (transfers.length === 0) {
+                output.append('<div class="settlement-transfer">All settled!</div>');
+            } else {
+                transfers.forEach(t => {
+                    output.append(`<div class="settlement-transfer">
+                        <span class="friend-name result-output-friend" style="background-color:${t.fromRgb};">${t.from}</span> → <span class="friend-name result-output-friend" style="background-color:${t.toRgb};">${t.to}</span><span class="settlement-amount">$${t.amount.toFixed(2)}</span>
+                    </div>`);
+                });
+            }
+        }
     }
 
     editName(id) {
