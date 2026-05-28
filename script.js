@@ -121,8 +121,32 @@ class FriendManager {
         this.updateFriendList();
     }
 
+    isPrimaryFriend(friend) {
+        return friend && friend.id === 1;
+    }
+
+    getFriendInitials(friend) {
+        if (this.isPrimaryFriend(friend)) {
+            return 'ME';
+        }
+        return friend.name.substring(0, 2).toUpperCase();
+    }
+
+    escapeAttribute(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
     removeFriend(id) {
-        this.friends.delete(id);
+        const friendId = parseInt(id, 10);
+        const friend = this.friends.get(friendId);
+        if (this.isPrimaryFriend(friend)) {
+            return;
+        }
+        this.friends.delete(friendId);
         this.updateFriendList();
     }
 
@@ -138,11 +162,8 @@ class FriendManager {
         this.friends.forEach(friend => {
             let friendElement = this.friendListElement.find(`.friend-name[data-id="${friend.id}"]`);
             if (!friendElement.length) {
-                // Determine Initials or photo placeholder
-                let initials = 'ME';
-                if (friend.name !== 'Amelia' && friend.name !== 'Friend1') {
-                    initials = friend.name.substring(0, 2).toUpperCase();
-                }
+                const initials = this.getFriendInitials(friend);
+                const deleteButton = this.isPrimaryFriend(friend) ? '' : '<button class="delete-btn" data-id="' + friend.id + '"><i class="fa-solid fa-xmark"></i></button>';
 
                 this.friendListElement.append(`
                     <div class="friend" data-id="${friend.id}">
@@ -150,19 +171,14 @@ class FriendManager {
                             <div class="friend-avatar" style="background-color: ${friend.rgbString};">
                                 ${initials}
                             </div>
-                            <button class="delete-btn" data-id="${friend.id}"><i class="fa-solid fa-xmark"></i></button>
+                            ${deleteButton}
                         </div>
                         <span class="friend-name" data-id="${friend.id}">${friend.name}</span>
                     </div>
                 `);
             } else {
                 friendElement[0].innerHTML = friend.name;
-                // Update avatar initials if name changed
-                let initials = 'ME';
-                if (friend.name !== 'Amelia' && friend.name !== 'Friend1') {
-                    initials = friend.name.substring(0, 2).toUpperCase();
-                }
-                $(friendElement).closest('.friend').find('.friend-avatar').text(initials);
+                $(friendElement).closest('.friend').find('.friend-avatar').text(this.getFriendInitials(friend));
             }
         });
 
@@ -210,10 +226,7 @@ class FriendManager {
                 const percentage = item.getParticipantPercentage(friendId);
                 let friend = this.friends.get(friendId);
 
-                let initials = 'ME';
-                if (friend.name !== 'Amelia' && friend.name !== 'Friend1') {
-                    initials = friend.name.substring(0, 2).toUpperCase();
-                }
+                const initials = this.getFriendInitials(friend);
 
                 $($(div).find('label')).html( `
                     <div class="participant-row-inner">
@@ -225,7 +238,8 @@ class FriendManager {
                             <span class="unit-text">${item.getUnitType() == ItemType.kTypePercent ? '%' : 'share(s)'}</span>
                         </div>
                         <div class="participant-toggle-box">
-                            <i class="fa-solid fa-xmark"></i>
+                            <i class="fa-solid fa-minus active-icon"></i>
+                            <i class="fa-solid fa-plus inactive-icon"></i>
                         </div>
                     </div>
                 `);
@@ -292,8 +306,7 @@ class FriendManager {
                             </div>
 
                             <div class="item-amount-wrapper">
-                                <span class="price-btn-label">Price</span>
-                                <input type="number" class="item-amount" id="item-amount-${item.id}" min="0" step="0.01" value="${item.amount || ''}" placeholder="0.00">
+                                <input type="number" class="item-amount" id="item-amount-${item.id}" min="0" step="0.01" value="${item.amount || ''}" placeholder="Price">
                             </div>
 
                             <button class="delete-btn delete-green-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -366,6 +379,13 @@ class FriendManager {
             const itemdiv = $(e.target).closest('.item');
             itemdiv.find('.item-collapsed-row').hide();
             itemdiv.find('.item-expanded-row').show();
+        });
+
+        $('#items-list .item .item-collapsed-row').off('click').on('click', (e) => {
+            if ($(e.target).closest('.collapse-btn, .delete-btn').length) {
+                return;
+            }
+            $(e.currentTarget).find('.collapsed-toggle-btn').trigger('click');
         });
 
         $('#items-list .item .distribute-btn').off('click').on('click', (e) => {
@@ -525,6 +545,7 @@ class FriendManager {
     }
 
     showResult(originalAmount, totalAmount, results) {
+        const ratio = originalAmount > 0 ? (totalAmount / originalAmount) : 1;
         $('#total-amount').html(totalAmount.toFixed(2));
         $('#total-amount-input').attr('placeholder', totalAmount.toFixed(2));
 
@@ -536,48 +557,52 @@ class FriendManager {
         const resultsOutput = $('#results-output');
         resultsOutput.html('');
         this.friends.forEach((friend, fid) => {
-            const owedPercent = results.get(fid).total / resultTotal;
+            const owedPercent = resultTotal > 0 ? results.get(fid).total / resultTotal : 0;
             const totalAmountOwed = totalAmount * owedPercent;
             resultsOutput.append(`
-                <div>
-                    <div class="result-output-friend-container" id="result-output-friend-${fid}-container">
-                        <span class="result-output-friend friend-name" style="background-color:${friend.rgbString}">
-                            ${friend.name}&emsp;$${isNaN(totalAmountOwed) ? 0 : totalAmountOwed.toFixed(2)}
-                            <small class="result-output-percentage"><small><small style="font-weight:300;">(${isNaN(owedPercent) ? 0 : (owedPercent*100).toFixed(4)}%)</small></small></small>
-                            ${
-                                (isNaN(totalAmountOwed) || totalAmountOwed == 0) ?
-                                    '' :
-                                    `<span class="result-output-detail" style="background-color:${friend.rgbString}">
-                                        <div class="container-flex-space result-output-detail-topic">
-                                            <h5 style="color:rgb(255, 254, 251); display: inline;"><small>${friend.name}'s Item Summary</small></h5>
-                                            <i class="fa-regular fa-copy" id="copy-btn-${fid}"></i>
-                                        </div>
-                                        ${
-                                            Array.from(results.get(fid).items.entries()).map(([itemID, percentage]) => {
-                                                const item = this.items.get(itemID);
-                                                if (item) {
-                                                    const itemName = (item.name === null || item.name === undefined || item.name.trim() === '') ? '&lt;Unnamed&gt;' : item.name;
-                                                    const itemAmount = (item.amount * percentage) * (totalAmount/originalAmount);
-                                                    return `<div class="result-output-friend-item container-flex-space">
-                                                            <span class="item-head-name">${itemName}</span>
-                                                            <span class="item-head-amount">$${itemAmount.toFixed(2)}</span>
-                                                        </div>`
-                                                }
-                                                return '';
-                                            }).join('')
-                                        }
-                                    </span>`
-                            }
-                        </span>
+                <div class="result-output-friend-container" id="result-output-friend-${fid}-container">
+                    <div class="result-capsule">
+                        <div class="result-avatar" style="background-color:${friend.rgbString};">
+                            ${this.getFriendInitials(friend)}
+                        </div>
+                        <div class="result-info">
+                            <span class="result-name">${friend.name}</span>
+                            <span class="result-amount">$${isNaN(totalAmountOwed) ? 0 : totalAmountOwed.toFixed(2)}</span>
+                        </div>
                     </div>
+
+                    ${
+                        (isNaN(totalAmountOwed) || totalAmountOwed == 0) ?
+                            '' :
+                            `<span class="result-output-detail" style="background-color:${friend.rgbString}">
+                                <div class="container-flex-space result-output-detail-topic">
+                                    <h5 style="color:rgb(255, 254, 251); display: inline;">
+                                        <small>${friend.name}'s Summary <span style="font-weight:300; font-size:10px; opacity:0.85;">(${isNaN(owedPercent) ? 0 : (owedPercent*100).toFixed(2)}%)</span></small>
+                                    </h5>
+                                    <i class="fa-regular fa-clipboard" id="copy-btn-${fid}"></i>
+                                </div>
+                                ${
+                                    Array.from(results.get(fid).items.entries()).map(([itemID, percentage]) => {
+                                        const item = this.items.get(itemID);
+                                        if (item) {
+                                            const itemName = (item.name === null || item.name === undefined || item.name.trim() === '') ? '&lt;Unnamed&gt;' : item.name;
+                                            const itemAmount = (item.amount * percentage) * ratio;
+                                            return `<div class="result-output-friend-item container-flex-space">
+                                                    <span class="item-head-name">${itemName}</span>
+                                                    <span class="item-head-amount">$${itemAmount.toFixed(2)}</span>
+                                                </div>`
+                                        }
+                                        return '';
+                                    }).join('')
+                                }
+                            </span>`
+                    }
                 </div>
             `);
 
             $(`#result-output-friend-${fid}-container`).on('click', function(e) {
                 const $detail = $(this).find('.result-output-detail');
                 $detail.toggle();
-                const $percentage = $(this).find('.result-output-percentage');
-                $percentage.toggle();
             });
             $(`#result-output-friend-${fid}-container`).hover(
                 function(e) { /* mouseenter */
@@ -586,20 +611,12 @@ class FriendManager {
                         if ($detail.is(':hidden')) {
                             $detail.toggle();
                         }
-                        const $percentage = $(this).find('.result-output-percentage');
-                        if ($percentage.is(':hidden')) {
-                            $percentage.toggle();
-                        }
                     }
                 },
                 function(e) { /* mouseleave */
                     const $detail = $(this).find('.result-output-detail');
                     if (!$detail.is(':hidden')) {
                         $detail.toggle();
-                    }
-                    const $percentage = $(this).find('.result-output-percentage');
-                    if (!$percentage.is(':hidden')) {
-                        $percentage.toggle();
                     }
                 }
             );
@@ -613,7 +630,7 @@ class FriendManager {
                         const item = this.items.get(itemID);
                         if (item) {
                             const itemName = (item.name === null || item.name === undefined || item.name.trim() === '') ? '<Unnamed>' : item.name;
-                            const itemAmount = (item.amount * percentage) * (totalAmount/originalAmount);
+                            const itemAmount = (item.amount * percentage) * ratio;
                             return `📦 ${itemName} $${itemAmount.toFixed(2)}\n`
                         }
                         return '';
@@ -692,18 +709,16 @@ class FriendManager {
         $('#detail-amount-container').off('hide.bs.collapse').on('hide.bs.collapse', (e) => {
             $('.total-amount-container .collapse-btn .fa-angle-down').hide();
             $('.total-amount-container .collapse-btn .fa-angle-right').show();
-            $('#total-amount-title').css({
-                'color': '',
-                'user-select': ''
-            });
         });
         $('#detail-amount-container').off('show.bs.collapse').on('show.bs.collapse', (e) => {
             $('.total-amount-container .collapse-btn .fa-angle-down').show();
             $('.total-amount-container .collapse-btn .fa-angle-right').hide();
-            $('#total-amount-title').css({
-                'color': 'transparent',
-                'user-select': 'none'
-            });
+        });
+        $('.total-amount-container .summary-toggle-header').off('click').on('click', (e) => {
+            if ($(e.target).closest('.collapse-btn').length) {
+                return;
+            }
+            $(e.currentTarget).find('.collapse-btn').trigger('click');
         });
     }
 
@@ -780,10 +795,13 @@ class FriendManager {
                 <div class="settlement-paid-row">
                     <input type="checkbox" id="settlement-check-${fid}" class="settlement-checkbox" data-fid="${fid}" ${checked ? 'checked' : ''}>
                     <label for="settlement-check-${fid}" class="settlement-paid-label">
-                        <span class="friend-name result-output-friend" style="background-color:${friend.rgbString};">${friend.name}</span>
-                        <span>paid $</span>
-                        <input type="number" class="settlement-paid" data-fid="${fid}" min="0" step="0.01" ${!checked ? 'disabled placeholder="0"' : ''} ${saved !== undefined && checked ? `value="${saved}"` : ''}>
+                        <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(friend.name)}" style="background-color:${friend.rgbString};">${this.getFriendInitials(friend)}</span>
+                        <span class="settlement-paid-text">paid</span>
                     </label>
+                    <div class="settlement-paid-input-wrapper">
+                        <span class="currency-prefix">$</span>
+                        <input type="number" class="settlement-paid" data-fid="${fid}" min="0" step="0.01" ${!checked ? 'disabled placeholder="0"' : ''} ${saved !== undefined && checked ? `value="${saved}"` : ''}>
+                    </div>
                 </div>
             `);
         });
@@ -838,7 +856,13 @@ class FriendManager {
             const input = $(`.settlement-paid[data-fid="${fid}"]`);
             const checkbox = input.closest('.settlement-paid-row').find('.settlement-checkbox')[0];
             const paid = !checkbox.checked ? 0 : (input.val() !== '' ? parseFloat(input.val()) : placeholderVal);
-            balances.push({ fid, name: friend.name, rgb: friend.rgbString, balance: paid - share });
+            balances.push({
+                fid,
+                name: friend.name,
+                initials: this.getFriendInitials(friend),
+                rgb: friend.rgbString,
+                balance: paid - share
+            });
         });
 
         balances.sort((a, b) => a.balance - b.balance);
@@ -851,7 +875,15 @@ class FriendManager {
             if (isNaN(debtor.balance) || isNaN(creditor.balance)) break;
             const amount = Math.min(-debtor.balance, creditor.balance);
             if (amount > 0.01) {
-                transfers.push({ from: debtor.name, fromRgb: debtor.rgb, to: creditor.name, toRgb: creditor.rgb, amount });
+                transfers.push({
+                    from: debtor.name,
+                    fromInitials: debtor.initials,
+                    fromRgb: debtor.rgb,
+                    to: creditor.name,
+                    toInitials: creditor.initials,
+                    toRgb: creditor.rgb,
+                    amount
+                });
             }
             debtor.balance += amount;
             creditor.balance -= amount;
@@ -870,7 +902,10 @@ class FriendManager {
             } else {
                 transfers.forEach(t => {
                     output.append(`<div class="settlement-transfer">
-                        <span class="friend-name result-output-friend" style="background-color:${t.fromRgb};">${t.from}</span> → <span class="friend-name result-output-friend" style="background-color:${t.toRgb};">${t.to}</span><span class="settlement-amount">$${t.amount.toFixed(2)}</span>
+                        <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(t.from)}" style="background-color:${t.fromRgb};">${t.fromInitials}</span>
+                        <span class="settlement-arrow">→</span>
+                        <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(t.to)}" style="background-color:${t.toRgb};">${t.toInitials}</span>
+                        <span class="settlement-amount">$${t.amount.toFixed(2)}</span>
                     </div>`);
                 });
             }
