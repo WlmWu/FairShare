@@ -296,11 +296,6 @@ textarea {
     border: 2px solid transparent;
     flex-shrink: 0;
 }
-.friend:nth-child(1) .friend-avatar {
-    border-color: transparent;
-    background-color: var(--primary-color) !important;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 0 0 3px #d1f7e9;
-}
 .friend:hover .friend-avatar {
     transform: translateY(-3px);
     box-shadow: var(--shadow-md), 0 0 0 3px #d1f7e9;
@@ -603,8 +598,8 @@ textarea {
     transition: var(--transition-smooth);
 }
 .participant-avatar {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     color: #ffffff;
     flex-shrink: 0;
@@ -613,8 +608,9 @@ textarea {
     align-items: center;
     font-family: var(--font-head);
     font-weight: 700;
-    font-size: 11px;
+    font-size: 13px;
     box-shadow: var(--shadow-sm);
+    border: 1.5px solid #ffffff;
 }
 
 .participant-input-wrapper {

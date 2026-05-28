@@ -11,7 +11,8 @@ function isTouchDevice() {
 }
 
 class Friend {
-    static nextId = 1;
+    static primaryId = 0;
+    static nextId = Friend.primaryId;
     static hueOffset = Math.random() * 360;
 
     constructor(name) {
@@ -26,6 +27,9 @@ class Friend {
     }
 
     get rgbString() {
+        if (this.id === Friend.primaryId) {
+            return 'var(--primary-color)';
+        }
         return `hsl(${this.hsl.h}, ${this.hsl.s}%, ${this.hsl.l}%)`;
     }
 }
@@ -108,7 +112,7 @@ class FriendManager {
 
     initializeFriends() {
         this.friendListElement.empty();
-        this.addFriend('Friend1');
+        this.addFriend('me');
     }
     initializeItems() {
         this.itemsListElement.empty();
@@ -122,7 +126,7 @@ class FriendManager {
     }
 
     isPrimaryFriend(friend) {
-        return friend && friend.id === 1;
+        return friend && friend.id === Friend.primaryId;
     }
 
     getFriendInitials(friend) {
