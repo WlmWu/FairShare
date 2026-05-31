@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=receipt_long" />
 
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
@@ -44,8 +45,10 @@
             </div>
             <div class="card-body text-center">
                 <div class="new-split-bill-hero">
-                    <div class="hero-camera-circle">
-                        <i class="fa-solid fa-camera"></i>
+                    <div class="hero-camera-circle" id="receipt-preview-frame">
+                        <span class="material-symbols-outlined hero-receipt-symbol">receipt_long</span>
+                        <i class="fa-solid fa-spinner fa-spin hero-scan-spinner"></i>
+                        <img id="receipt-preview-img" alt="Receipt preview">
                     </div>
                     <h3 class="hero-title">New Split Bill</h3>
                     <p class="hero-subtitle">Upload a receipt or create a manual entry</p>
@@ -55,7 +58,6 @@
                     <button class="btn-primary" id="receipt-upload-btn" role="button">
                         <span class="btn-content">
                             <i class="fa-solid fa-camera"></i>
-                            <i class="fa-solid fa-spinner fa-spin" style="display: none;"></i>
                             &nbsp;Upload
                         </span>
                     </button>

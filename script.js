@@ -120,6 +120,8 @@ class FriendManager {
         this.items = new Map();
         this.friendListElement = $('#friends-list');
         this.itemsListElement = $('#items-list');
+        this.receiptPreviewUrl = null;
+        this.pendingReceiptPreviewFile = null;
         this.initializeFriends();
         this.initializeItems();
         this.attachEventListeners();
@@ -841,9 +843,13 @@ class FriendManager {
             }
             $('#receipt-upload-input').click();
         });
+        $('.new-split-bill-hero').on('click', () => {
+            $('#receipt-upload-btn').trigger('click');
+        });
         $('#receipt-upload-input').on('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                this.pendingReceiptPreviewFile = file;
                 this.analyzeReceipt(file);
             }
             $(event.target).val(null);
@@ -1027,6 +1033,16 @@ class FriendManager {
         }
     }
 
+    showReceiptPreview(file) {
+        if (this.receiptPreviewUrl) {
+            URL.revokeObjectURL(this.receiptPreviewUrl);
+        }
+
+        this.receiptPreviewUrl = URL.createObjectURL(file);
+        $('#receipt-preview-img').attr('src', this.receiptPreviewUrl);
+        $('#receipt-preview-frame').removeClass('is-processing').addClass('has-preview');
+    }
+
     analyzeReceipt(file) {
         const GOOGLE_API_KEY = localStorage.getItem('apiKey');
 
@@ -1063,8 +1079,7 @@ class FriendManager {
                 }]
             };
 
-            $('#receipt-upload-btn .fa-camera, #receipt-upload-btn .fa-arrow-up-from-bracket').hide();
-            $('#receipt-upload-btn .fa-spinner').show();
+            $('#receipt-preview-frame').removeClass('has-preview').addClass('is-processing');
 
             $.ajax({
                 url: url,
@@ -1100,6 +1115,11 @@ class FriendManager {
                             this.items.forEach((_, iid) => {
                                 $(`#item-collapse-btn-${iid}`).click()
                             });
+                            if (this.pendingReceiptPreviewFile) {
+                                this.showReceiptPreview(this.pendingReceiptPreviewFile);
+                                this.pendingReceiptPreviewFile = null;
+                            }
+                            document.getElementById('bill-section').scrollIntoView({ behavior: 'smooth' });
                         } catch (e) {
                             console.error('JSON parsing error:', e);
                             window.alert("[Error] There was an error processing the model's reply. Please try again.");
@@ -1120,8 +1140,7 @@ class FriendManager {
                     }
                 },
                 complete: () => {
-                    $('#receipt-upload-btn .fa-spinner').hide();
-                    $('#receipt-upload-btn .fa-camera, #receipt-upload-btn .fa-arrow-up-from-bracket').show();
+                    $('#receipt-preview-frame').removeClass('is-processing');
                     $('#receipt-upload-input').val();
                 }
             });
