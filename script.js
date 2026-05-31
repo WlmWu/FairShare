@@ -672,11 +672,9 @@ class FriendManager {
                     }
                 }
             );
-            $(`#copy-btn-${fid}`).on('click', (e) => {
+            $(`#copy-btn-${fid}`).closest('.result-output-detail-topic').on('click', (e) => {
                 e.stopPropagation();
                 const $copyBtn = $(`#copy-btn-${fid}`);
-                // const $detail = $copyBtn.closest('.result-output-friend');
-                // const textCopy = $detail.text().trim();
                 const textCopy = `${friend.name}'s Item Summary:\n\n${
                     Array.from(results.get(fid).items.entries()).map(([itemID, percentage]) => {
                         const item = this.items.get(itemID);
@@ -692,9 +690,9 @@ class FriendManager {
                 navigator.clipboard.writeText(textCopy)
                     .then(() => {
                         console.log('Text copied to clipboard:', textCopy);
-                        $copyBtn.removeClass('fa-regular fa-clipboard').addClass('fa-solid fa-check');
+                        $copyBtn.attr('class', 'fa-solid fa-check');
                         setTimeout(() => {
-                            $copyBtn.removeClass('fa-solid fa-check').addClass('fa-regular fa-clipboard');
+                            $copyBtn.attr('class', 'fa-regular fa-clipboard');
                         }, 1500);
                     })
                     .catch(err => {
@@ -788,6 +786,35 @@ class FriendManager {
             document.getElementById('bill-section').scrollIntoView({ behavior: 'smooth' });
         });
 
+        let settlementScrollFrame = null;
+        const scrollToPageBottom = () => {
+            const scrollRoot = document.scrollingElement || document.documentElement;
+            window.scrollTo(0, scrollRoot.scrollHeight);
+        };
+        const isNearPageBottom = () => {
+            const scrollRoot = document.scrollingElement || document.documentElement;
+            return window.scrollY + window.innerHeight >= scrollRoot.scrollHeight - 120;
+        };
+        $('#settlement-section').off('show.bs.collapse').on('show.bs.collapse', () => {
+            if (!isNearPageBottom()) return;
+
+            const startTime = performance.now();
+            const keepBottomAnchored = () => {
+                scrollToPageBottom();
+                if (performance.now() - startTime < 400) {
+                    settlementScrollFrame = requestAnimationFrame(keepBottomAnchored);
+                }
+            };
+            settlementScrollFrame = requestAnimationFrame(keepBottomAnchored);
+        });
+        $('#settlement-section').off('shown.bs.collapse').on('shown.bs.collapse', () => {
+            if (settlementScrollFrame) {
+                cancelAnimationFrame(settlementScrollFrame);
+                settlementScrollFrame = null;
+            }
+            scrollToPageBottom();
+        });
+
         $('#share-result-btn').on('click', async () => {
             try {
                 const res = this.getShareResults();
@@ -867,6 +894,15 @@ class FriendManager {
             input.attr('placeholder', checked ? '' : '0');
             if (checked) input.focus();
             this.calculate();
+        });
+        $('.settlement-paid-row').off('click', '.settlement-paid-input-wrapper').on('click', '.settlement-paid-input-wrapper', (e) => {
+            const row = $(e.currentTarget).closest('.settlement-paid-row');
+            const checkbox = row.find('.settlement-checkbox')[0];
+            if (checkbox.checked) return;
+
+            e.preventDefault();
+            checkbox.checked = true;
+            $(checkbox).trigger('change');
         });
     }
 
@@ -954,10 +990,14 @@ class FriendManager {
             } else {
                 transfers.forEach(t => {
                     output.append(`<div class="settlement-transfer">
-                        <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(t.from)}" style="background-color:${t.fromRgb};">${t.fromInitials}</span>
-                        <span class="settlement-arrow">→</span>
-                        <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(t.to)}" style="background-color:${t.toRgb};">${t.toInitials}</span>
-                        <span class="settlement-amount">$${t.amount.toFixed(2)}</span>
+                        <span class="settlement-transfer-content">
+                            <span class="settlement-transfer-route">
+                                <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(t.from)}" style="background-color:${t.fromRgb};">${t.fromInitials}</span>
+                                <span class="settlement-arrow">→</span>
+                                <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(t.to)}" style="background-color:${t.toRgb};">${t.toInitials}</span>
+                            </span>
+                            <span class="settlement-amount">$${t.amount.toFixed(2)}</span>
+                        </span>
                     </div>`);
                 });
             }
