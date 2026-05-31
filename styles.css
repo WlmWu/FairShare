@@ -23,6 +23,12 @@
     --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+html {
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 /* Base Body Styles */
 body {
     font-family: var(--font-body);
@@ -38,6 +44,7 @@ input,
 select,
 textarea {
     font-family: var(--font-body);
+    touch-action: manipulation;
 }
 
 /* ==========================================
@@ -47,7 +54,7 @@ textarea {
     width: 100%;
     max-width: 540px; /* Elegant single-column stack on all screen sizes */
     margin: 0 auto;
-    padding: 24px 16px;
+    padding: 24px 8px;
     box-sizing: border-box;
 }
 
@@ -386,8 +393,14 @@ textarea {
     margin-bottom: 0;
 }
 
+#bill-section .card-body:not(.empty-state) {
+    padding: 0 6px 8px 6px !important;
+}
+
 /* Individual item — no card look, just flat rows inside the parent card */
 #items-list > .item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     border: none;
     border-radius: 0;
     background-color: transparent;
@@ -405,13 +418,58 @@ textarea {
 /* ---- COLLAPSED STATE (read-only row) ---- */
 .item-header-row {
     display: flex;
+    grid-column: 1;
+    grid-row: 1;
     align-items: center;
-    padding: 16px 16px 4px 16px;
-    gap: 12px;
+    padding: 20px 0 12px 0;
+    gap: 6px;
     min-height: 50px;
 }
 .item-collapsed-row {
-    padding-bottom: 16px !important;
+    visibility: visible;
+    opacity: 1;
+    z-index: 1;
+    pointer-events: none;
+    cursor: pointer;
+}
+.item-expanded-row {
+    visibility: visible;
+    opacity: 1;
+    z-index: 2;
+    pointer-events: auto;
+    cursor: pointer;
+}
+.item-collapsed-row .collapse-green-btn,
+.item-collapsed-row .delete-green-btn {
+    visibility: hidden;
+    pointer-events: none;
+}
+.item-collapsed-name,
+.item-collapsed-price {
+    visibility: hidden;
+    opacity: 0;
+}
+#items-list > .item.is-collapsed .item-expanded-row .item-name-wrapper,
+#items-list > .item.is-collapsed .item-expanded-row .item-amount-wrapper {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+#items-list > .item.is-collapsed .item-collapsed-name,
+#items-list > .item.is-collapsed .item-collapsed-price {
+    visibility: visible;
+    opacity: 1;
+}
+.item-container {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+}
+#items-list > .item:first-child .item-header-row {
+    padding-top: 32px;
+}
+#items-list > .item:last-child.is-collapsed {
+    padding-bottom: 20px !important;
     cursor: pointer;
 }
 
@@ -441,6 +499,7 @@ textarea {
 .item-name-wrapper {
     flex: 2;
     min-width: 0;
+    margin-right: 20px;
 }
 .item-name-wrapper input {
     width: 100% !important;
@@ -482,8 +541,7 @@ textarea {
 
 /* Amount input wrapper (shown in expanded state) */
 .item-amount-wrapper {
-    flex: 1.2;
-    min-width: 86px;
+    flex: 0 0 68px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
@@ -536,14 +594,18 @@ textarea {
 
 /* ---- EXPANDED STATE (participant rows) ---- */
 .item-details-body {
-    padding: 16px;
+    padding: 0 16px 16px 16px;
     background-color: transparent;
+}
+#items-list > .item:last-child .item-details-body {
+    padding-bottom: 32px;
 }
 .item-unit-row {
     display: flex;
-    justify-content: flex-start;
-    margin-bottom: 10px;
-    padding-top: 2px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 0;
 }
 .btn-unit-toggle {
     background-color: #e2e8f0;
@@ -564,6 +626,17 @@ textarea {
 .btn-unit-toggle:hover {
     background-color: #cbd5e1;
     color: #1e293b;
+}
+.btn-unit-toggle .unit-spin {
+    animation: unit-spin 0.35s ease-in-out;
+}
+@keyframes unit-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Participant list entries */
@@ -677,8 +750,6 @@ textarea {
     background-color: #f0f0f0;
 }
 .item-friend input[type="checkbox"]:not(:checked) + label .participant-toggle-box {
-    border-color: #d1d5db;
-    color: #9ca3af;
     background-color: #f3f4f6;
 }
 .item-friend input[type="checkbox"]:not(:checked) + label .participant-row-inner {
@@ -686,6 +757,9 @@ textarea {
 }
 .item-friend input[type="checkbox"]:not(:checked) + label .participant-input-wrapper {
     background-color: #f8fafc;
+}
+.item-friend input[type="checkbox"]:not(:checked) + label .participant-input-wrapper input {
+    pointer-events: none;
 }
 
 .item-friend input[type="checkbox"]:checked + label .participant-toggle-box .active-icon {
@@ -785,7 +859,7 @@ textarea {
     margin: 0 !important;
 }
 .detail-amount-content {
-    padding: 1em;
+    padding: 1em 1em 0 1em;
 }
 .summary-amount-title {
     font-family: var(--font-head);
@@ -812,6 +886,11 @@ textarea {
 }
 .detail-label {
     color: var(--text-muted);
+}
+.total-amount-detail-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 .detail-value {
     font-weight: 700;
@@ -877,12 +956,12 @@ textarea {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 11px;
+    /* font-size: 11px; */
     font-weight: 600;
     color: var(--primary-color);
     cursor: pointer;
     background-color: var(--primary-light);
-    padding: 3px 10px;
+    padding: 3px;
     border-radius: 12px;
 }
 .mytooltip .tooltiptext {
@@ -1252,4 +1331,12 @@ textarea {
         grid-template-columns: 1fr;
     }
 
+}
+
+@media (hover: none) and (pointer: coarse) {
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
 }

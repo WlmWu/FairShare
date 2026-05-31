@@ -10,6 +10,21 @@ function isTouchDevice() {
     return false;
 }
 
+function disableDoubleTapZoom() {
+    if (!isTouchDevice()) return;
+
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (event) => {
+        const now = Date.now();
+        if (now - lastTouchEnd < 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, { passive: false });
+}
+
+disableDoubleTapZoom();
+
 class Friend {
     static primaryId = 0;
     static nextId = Friend.primaryId;
@@ -317,7 +332,7 @@ class FriendManager {
                         </div>
 
                         <!-- Collapsed header: caret + text + bold price + delete -->
-                        <div class="item-header-row item-collapsed-row" style="display:none;">
+                        <div class="item-header-row item-collapsed-row">
                             <button class="collapse-btn collapse-green-btn collapsed-toggle-btn" data-bs-toggle="collapse" data-bs-target="#item-container-${item.id}" aria-expanded="false">
                                 <i class="fa-solid fa-caret-down"></i>
                             </button>
@@ -363,26 +378,25 @@ class FriendManager {
             this.removeItem(itemId);
         });
 
-        // When collapse hides (item collapses): show collapsed row, hide expanded row
         $('#items-list .item .item-container').off('hide.bs.collapse').on('hide.bs.collapse', (e) => {
             const itemdiv = $(e.target).closest('.item');
             const name = itemdiv.find('.item-name').val() || 'Untitled';
             const amount = itemdiv.find('.item-amount').val();
 
-            // Update collapsed row text
             itemdiv.find('.item-collapsed-name').text(name);
             itemdiv.find('.item-collapsed-price').text(amount ? '$' + parseFloat(amount).toFixed(2) : '');
-
-            // Swap rows
-            itemdiv.find('.item-expanded-row').hide();
-            itemdiv.find('.item-collapsed-row').show();
+            itemdiv.addClass('is-collapsed');
+            itemdiv.find('.item-expanded-row .collapse-btn i')
+                .removeClass('fa-caret-up')
+                .addClass('fa-caret-down');
         });
 
-        // When collapse shows (item expands): show expanded row, hide collapsed row
         $('#items-list .item .item-container').off('show.bs.collapse').on('show.bs.collapse', (e) => {
             const itemdiv = $(e.target).closest('.item');
-            itemdiv.find('.item-collapsed-row').hide();
-            itemdiv.find('.item-expanded-row').show();
+            itemdiv.removeClass('is-collapsed');
+            itemdiv.find('.item-expanded-row .collapse-btn i')
+                .removeClass('fa-caret-down')
+                .addClass('fa-caret-up');
         });
 
         $('#items-list .item .item-collapsed-row').off('click').on('click', (e) => {
@@ -392,12 +406,35 @@ class FriendManager {
             $(e.currentTarget).find('.collapsed-toggle-btn').trigger('click');
         });
 
+        $('#items-list .item').off('click.collapsedPadding').on('click.collapsedPadding', (e) => {
+            const item = $(e.currentTarget);
+            if (!item.hasClass('is-collapsed')) return;
+            if ($(e.target).closest('.item-header-row, .collapse-btn, .delete-btn').length) {
+                return;
+            }
+            item.find('.collapsed-toggle-btn').trigger('click');
+        });
+
+        $('#items-list .item .item-expanded-row').off('click').on('click', (e) => {
+            if ($(e.target).closest('input, .collapse-btn, .delete-btn').length) {
+                return;
+            }
+            $(e.currentTarget).find('.collapse-btn').trigger('click');
+        });
+
         $('#items-list .item .distribute-btn').off('click').on('click', (e) => {
             const itemId = parseInt($(e.target).closest('.item').data('id'));
             this.autoDistribute(itemId);
         });
 
         $('#items-list .item .unit-btn').off('click').on('click', (e) => {
+            const $icon = $(e.currentTarget).find('i');
+            $icon.removeClass('unit-spin');
+            void $icon[0].offsetWidth;
+            $icon.addClass('unit-spin').one('animationend', () => {
+                $icon.removeClass('unit-spin');
+            });
+
             const itemId = parseInt($(e.target).closest('.item').data('id'));
             this.switchUnit(itemId);
         });
@@ -442,6 +479,17 @@ class FriendManager {
             this.items.get(itemId).setParticipant(friendId, input.value, check);
             this.calculate();
         }.bind(this));
+
+        $('#items-list .item-friends .participant-input-wrapper').off('click').on('click', function(e) {
+            const itemFriend = $(e.currentTarget).closest('.item-friend');
+            const checkbox = itemFriend.find('input[type="checkbox"]')[0];
+            if (checkbox.checked) return;
+
+            e.preventDefault();
+            checkbox.checked = true;
+            $(checkbox).trigger('change');
+            itemFriend.find('.percentage-input').trigger('focus');
+        });
 
         $('#items-list .item-friends .percentage-input').off('input').on('input', function(e) {
             const itemId = parseInt($(e.target).closest('label').attr('for').split('-')[1]);

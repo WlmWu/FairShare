@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Enjoy meals with friends but tired of calculating and splitting the bill? Try Shareceipt! A simple, intuitive tool requires no registration and handles tax, service charges, and other additional fees effortlessly." />
     <title>Shareceipt: Quick and Easy Expense Sharing</title>
 
@@ -125,16 +125,16 @@
                                     <span class="fee-percentage-sign">%</span>
                                 </div>
                             </div>
-                            <div class="summary-detail-row justify-content-center py-1">
-                                <div class="mytooltip" id="total-amount-tooltip">
-                                    <i class="fa-regular fa-circle-question"></i> Help
-                                    <span class="tooltiptext">
-                                        Total = Subtotal × (1 + Fee)
-                                    </span>
-                                </div>
-                            </div>
                             <div class="summary-detail-row align-items-center border-top pt-3 mt-2">
-                                <span class="detail-label font-bold">Total Amount</span>
+                                <span class="detail-label font-bold total-amount-detail-label">
+                                    Total Amount
+                                    <span class="mytooltip" id="total-amount-tooltip">
+                                        <i class="fa-regular fa-circle-question"></i>
+                                        <span class="tooltiptext">
+                                            Total = Subtotal × (1 + Fee)
+                                        </span>
+                                    </span>
+                                </span>
                                 <div class="total-input-wrapper">
                                     <span class="currency-prefix">$</span>
                                     <input type="number" id="total-amount-input" min="0" step="1" placeholder="0.00">
