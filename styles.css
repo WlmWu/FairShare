@@ -4,15 +4,15 @@
 
 /* Modern CSS Variable Tokens */
 :root {
-    --primary-color: #2e12b9; /* Royal Purple/Indigo */
-    --primary-light: #eeebff; /* Soft Accent Light Purple */
+    --primary-color: #0b5f59; /* Deep Teal */
+    --primary-light: #e0f7f3; /* Soft Teal Tint */
     --secondary-color: #10b981; /* Emerald/Mint Green */
     --secondary-hover: #059669;
     --bg-main: #f6f8fb; /* Light grey backdrop */
     --bg-card: #ffffff; /* Card content background */
     --text-main: #1f2937; /* Very dark slate grey */
     --text-muted: #6b7280; /* Soft slate grey */
-    --font-head: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-head: 'IBM Plex Mono', "SFMono-Regular", Consolas, monospace;
     --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
@@ -106,6 +106,79 @@ textarea {
 }
 .info-btn-circle:hover {
     transform: scale(1.1);
+}
+
+.app-info-popup {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background-color: rgba(31, 41, 55, 0.32);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 1000;
+    transition: var(--transition-smooth);
+}
+.app-info-popup[hidden] {
+    display: none;
+}
+.app-info-popup.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+.app-info-panel {
+    position: relative;
+    width: min(100%, 340px);
+    padding: 22px 22px 20px;
+    border-radius: var(--radius-lg);
+    background-color: var(--bg-card);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(8px) scale(0.98);
+    transition: var(--transition-smooth);
+}
+.app-info-popup.is-open .app-info-panel {
+    transform: translateY(0) scale(1);
+}
+.app-info-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-smooth);
+}
+.app-info-close:hover {
+    transform: scale(1.08);
+}
+.app-info-panel h2 {
+    margin: 0 34px 12px 0;
+    color: var(--primary-color);
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 700;
+}
+.app-info-panel p {
+    margin: 0;
+    color: var(--text-main);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+}
+.app-info-panel p + p {
+    margin-top: 8px;
+    color: var(--text-muted);
 }
 
 /* ==========================================
@@ -284,13 +357,14 @@ textarea {
 .key-badge-btn {
     background: none;
     border: none;
-    color: #ffd700;
+    color: #e6b94f;
     font-size: 16px;
     padding: 4px;
     cursor: pointer;
     transition: var(--transition-smooth);
 }
 .key-badge-btn:hover {
+    color: #f2cf74;
     transform: scale(1.15);
 }
 

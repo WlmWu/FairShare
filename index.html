@@ -9,7 +9,7 @@
     <!-- Premium Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=receipt_long" />
 
     <link rel="stylesheet" href="styles.css">
@@ -30,7 +30,7 @@
                     <span class="logo-subtitle">Quick and Easy Expense Sharing</span>
                 </div>
             </div>
-            <button class="info-btn-circle" title="App Info">
+            <button class="info-btn-circle" id="app-info-btn" title="App Info" aria-controls="app-info-popup" aria-expanded="false">
                 <i class="fa-solid fa-circle-info"></i>
             </button>
         </header>
@@ -175,6 +175,17 @@
                 </div>
             </div>
         </section>
+    </div>
+
+    <div class="app-info-popup" id="app-info-popup" role="dialog" aria-modal="true" aria-labelledby="app-info-title" hidden>
+        <div class="app-info-panel">
+            <button class="app-info-close" id="app-info-close" aria-label="Close app info">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h2 id="app-info-title">Shareceipt</h2>
+            <p>Split receipt items, handle fees, and settle up with friends.</p>
+            <p>Prepare your Gemini key, then upload a receipt to get started.</p>
+        </div>
     </div>
 
     <!-- Hidden JQuery load -->

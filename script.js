@@ -372,6 +372,10 @@ class FriendManager {
             const id = $(event.currentTarget).data('id');
             this.editName(id);
         });
+        this.friendListElement.off('click', '.friend-avatar').on('click', '.friend-avatar', (event) => {
+            const id = $(event.currentTarget).closest('.friend').data('id');
+            this.editName(id);
+        });
     }
 
     bindItemEvents() {
@@ -786,6 +790,37 @@ class FriendManager {
 
         $('#manual-entry-btn').on('click', () => {
             document.getElementById('bill-section').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        const $appInfoPopup = $('#app-info-popup');
+        const openAppInfo = () => {
+            $appInfoPopup.prop('hidden', false);
+            requestAnimationFrame(() => {
+                $appInfoPopup.addClass('is-open');
+                $('#app-info-btn').attr('aria-expanded', 'true');
+                $('#app-info-close').trigger('focus');
+            });
+        };
+        const closeAppInfo = () => {
+            $appInfoPopup.removeClass('is-open');
+            $('#app-info-btn').attr('aria-expanded', 'false').trigger('focus');
+            setTimeout(() => {
+                if (!$appInfoPopup.hasClass('is-open')) {
+                    $appInfoPopup.prop('hidden', true);
+                }
+            }, 180);
+        };
+        $('#app-info-btn').on('click', openAppInfo);
+        $('#app-info-close').on('click', closeAppInfo);
+        $appInfoPopup.on('click', (event) => {
+            if (event.target === event.currentTarget) {
+                closeAppInfo();
+            }
+        });
+        $(document).on('keydown', (event) => {
+            if (event.key === 'Escape' && $appInfoPopup.hasClass('is-open')) {
+                closeAppInfo();
+            }
         });
 
         let settlementScrollFrame = null;
