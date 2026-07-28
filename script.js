@@ -114,6 +114,126 @@ class Item {
 
 }
 
+let moneyFormat = { currency: '', locale: '' };
+
+function setMoneyFormat(currency, locale) {
+  const next = {
+    currency: String(currency || '').trim(),
+    locale: String(locale || '').trim()
+  };
+
+  try {
+    buildMoneyFormatter(next).format(0);
+  } catch (e) {
+    console.warn('Unsupported currency/locale, keeping current format:', next, e.message);
+    return;
+  }
+
+  moneyFormat = next;
+  refreshCurrencyLabels();
+}
+
+function buildMoneyFormatter({ currency, locale }) {
+  const options = { numberingSystem: 'latn', useGrouping: true };
+
+  if (currency) {
+    options.style = 'currency';
+    options.currency = currency;
+  } else {
+    options.minimumFractionDigits = 2;
+    options.maximumFractionDigits = 2;
+  }
+
+  return new Intl.NumberFormat(locale || undefined, options);
+}
+
+function getCurrencyDecimals() {
+  try {
+    return buildMoneyFormatter(moneyFormat).resolvedOptions().minimumFractionDigits;
+  } catch (e) {
+    return 2;
+  }
+}
+
+function getAmountDecimals(value) {
+  const natural = getCurrencyDecimals();
+  const scaled = value * 10 ** natural;
+
+  return Math.abs(Math.round(scaled) - scaled) < 1e-6 ? natural : natural + 2;
+}
+
+function formatAmountParts(amount) {
+  const value = Number(amount);
+  const safe = isNaN(value) ? 0 : value;
+  const decimals = getAmountDecimals(safe);
+
+  const formatter = new Intl.NumberFormat(moneyFormat.locale || undefined, {
+    numberingSystem: 'latn',
+    useGrouping: true,
+    style: moneyFormat.currency ? 'currency' : 'decimal',
+    currency: moneyFormat.currency || undefined,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  });
+
+  return formatter.formatToParts(safe);
+}
+
+function formatMoney(amount) {
+  const value = Number(amount);
+  const safe = isNaN(value) ? 0 : value;
+
+  try {
+    const parts = formatAmountParts(safe);
+    const symbol = parts.filter(part => part.type === 'currency').map(part => part.value).join('');
+    const number = parts.filter(part => part.type !== 'currency').map(part => part.value).join('').trim();
+
+    return `${symbol}${number}`;
+  } catch (e) {
+    return `$${safe.toFixed(2)}`;
+  }
+}
+
+function getCurrencySymbol() {
+  try {
+    const parts = buildMoneyFormatter(moneyFormat).formatToParts(0);
+    return parts.find(part => part.type === 'currency')?.value || '$';
+  } catch (e) {
+    return '$';
+  }
+}
+
+function refreshCurrencyLabels() {
+  $('.currency-symbol, .currency-prefix').text(getCurrencySymbol());
+}
+
+function formatComputedHint(amount) {
+  const value = Number(amount);
+  const safe = isNaN(value) ? 0 : value;
+  const decimals = getAmountDecimals(safe);
+
+  try {
+    return new Intl.NumberFormat(moneyFormat.locale || undefined, {
+      numberingSystem: 'latn',
+      useGrouping: false,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(safe);
+  } catch (e) {
+    return String(safe);
+  }
+}
+
+function formatPercentHint(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return '';
+  }
+
+  return String(Number(number.toFixed(4)));
+}
+
 class FriendManager {
     constructor() {
         this.friends = new Map();
@@ -339,7 +459,7 @@ class FriendManager {
                                 <i class="fa-solid fa-caret-down"></i>
                             </button>
                             <span class="item-collapsed-name">${item.name || 'Untitled'}</span>
-                            <span class="item-collapsed-price">${item.amount ? '$' + parseFloat(item.amount).toFixed(2) : ''}</span>
+                            <span class="item-collapsed-price">${item.amount ? formatMoney(item.amount) : ''}</span>
                             <button class="delete-btn delete-green-btn"><i class="fa-solid fa-xmark"></i></button>
                         </div>
 
@@ -357,7 +477,7 @@ class FriendManager {
                 // Update collapsed row text/price in real-time
                 const $collRow = itemElement.find('.item-collapsed-row');
                 $collRow.find('.item-collapsed-name').text(item.name || 'Untitled');
-                $collRow.find('.item-collapsed-price').text(item.amount ? '$' + parseFloat(item.amount).toFixed(2) : '');
+                $collRow.find('.item-collapsed-price').text(item.amount ? formatMoney(item.amount) : '');
             }
         });
         this.updateItemFriends();
@@ -390,7 +510,7 @@ class FriendManager {
             const amount = itemdiv.find('.item-amount').val();
 
             itemdiv.find('.item-collapsed-name').text(name);
-            itemdiv.find('.item-collapsed-price').text(amount ? '$' + parseFloat(amount).toFixed(2) : '');
+            itemdiv.find('.item-collapsed-price').text(amount ? formatMoney(amount) : '');
             itemdiv.addClass('is-collapsed');
             itemdiv.find('.item-expanded-row .collapse-btn i')
                 .removeClass('fa-caret-up')
@@ -469,7 +589,7 @@ class FriendManager {
             if (!isNaN(itemId) && this.items.get(itemId)) {
                 this.items.get(itemId).amount = val;
                 // Sync collapsed row price
-                const priceStr = e.target.value ? '$' + parseFloat(e.target.value).toFixed(2) : '';
+                const priceStr = e.target.value ? formatMoney(e.target.value) : '';
                 $(e.target).closest('.item').find('.item-collapsed-price').text(priceStr);
             }
             this.calculate();
@@ -547,7 +667,7 @@ class FriendManager {
                 if (item.getParticipantChecked(fid)) {
                     const percentage = (value => isNaN(value) ? remainPercentage/countNaN : value)(item.getParticipantPercentage(fid));
                     const itemfriendInput = $(`label[for="item-${item.id}-friend-${fid}"]`).find('input');
-                    itemfriendInput.attr('placeholder', percentage);
+                    itemfriendInput.attr('placeholder', formatPercentHint(percentage));
 
                     const friendResult = results.get(fid);
                     friendResult.total += item.amount * percentage / 100;
@@ -604,10 +724,10 @@ class FriendManager {
 
     showResult(originalAmount, totalAmount, results) {
         const ratio = originalAmount > 0 ? (totalAmount / originalAmount) : 1;
-        $('#total-amount').html(totalAmount.toFixed(2));
-        $('#total-amount-input').attr('placeholder', totalAmount.toFixed(2));
+        $('#total-amount').html(formatMoney(totalAmount));
+        $('#total-amount-input').attr('placeholder', formatMoney(totalAmount));
 
-        $('#subtotal-amount').html(originalAmount.toFixed(2));
+        $('#subtotal-amount').html(formatMoney(originalAmount));
         $('#total-amount-additional').attr('placeholder', originalAmount > 0 ? ((totalAmount/originalAmount - 1) * 100).toFixed(1) : '0.0');
 
         const resultTotal = Array.from(results.values()).reduce((accumulator, currentValue) => accumulator + currentValue.total, 0);
@@ -625,7 +745,7 @@ class FriendManager {
                         </div>
                         <div class="result-info">
                             <span class="result-name">${friend.name}</span>
-                            <span class="result-amount">$${isNaN(totalAmountOwed) ? 0 : totalAmountOwed.toFixed(2)}</span>
+                            <span class="result-amount">${formatMoney(isNaN(totalAmountOwed) ? 0 : totalAmountOwed)}</span>
                         </div>
                     </div>
 
@@ -647,7 +767,7 @@ class FriendManager {
                                             const itemAmount = (item.amount * percentage) * ratio;
                                             return `<div class="result-output-friend-item container-flex-space">
                                                     <span class="item-head-name">${itemName}</span>
-                                                    <span class="item-head-amount">$${itemAmount.toFixed(2)}</span>
+                                                    <span class="item-head-amount">${formatMoney(itemAmount)}</span>
                                                 </div>`
                                         }
                                         return '';
@@ -687,11 +807,11 @@ class FriendManager {
                         if (item) {
                             const itemName = (item.name === null || item.name === undefined || item.name.trim() === '') ? '<Unnamed>' : item.name;
                             const itemAmount = (item.amount * percentage) * ratio;
-                            return `📦 ${itemName} $${itemAmount.toFixed(2)}\n`
+                            return `📦 ${itemName} ${formatMoney(itemAmount)}\n`
                         }
                         return '';
                     }).join('')
-                }\n🧮 Total: ${isNaN(totalAmountOwed) ? 0 : totalAmountOwed.toFixed(2)} (${isNaN(owedPercent) ? 0 : (owedPercent*100).toFixed(4)}%)`;
+                }\n🧮 Total: ${formatMoney(isNaN(totalAmountOwed) ? 0 : totalAmountOwed)} (${isNaN(owedPercent) ? 0 : (owedPercent*100).toFixed(4)}%)`;
 
                 navigator.clipboard.writeText(textCopy)
                     .then(() => {
@@ -713,17 +833,17 @@ class FriendManager {
         const [_, totalAmount, results, transfers] = this.calculate();
         const resultTotal = Array.from(results.values()).reduce((accumulator, currentValue) => accumulator + currentValue.total, 0);
 
-        let resStr = `💵 Total is $${(totalAmount).toFixed(2)} 💵\n`;
+        let resStr = `💵 Total is ${formatMoney(totalAmount)} 💵\n`;
         this.friends.forEach((friend, fid) => {
             const owedPercent = results.get(fid).total / resultTotal;
             const totalAmountOwed = totalAmount * owedPercent;
-            resStr = resStr.concat(`👉 ${friend.name}:\n  $${isNaN(totalAmountOwed) ? 0 : totalAmountOwed.toFixed(2)}\t(${isNaN(owedPercent) ? 0 : (owedPercent*100).toFixed(4)}%)\n`);
+            resStr = resStr.concat(`👉 ${friend.name}:\n  ${formatMoney(isNaN(totalAmountOwed) ? 0 : totalAmountOwed)}\t(${isNaN(owedPercent) ? 0 : (owedPercent*100).toFixed(4)}%)\n`);
         });
 
         if ($('#settlement-section').hasClass('show') && transfers && transfers.length > 0) {
             resStr += `\n💸 Settlement 💸\n`;
             transfers.forEach(t => {
-                resStr += `${t.from} → ${t.to}  $${t.amount.toFixed(2)}\n`;
+                resStr += `${t.from} → ${t.to}  ${formatMoney(t.amount)}\n`;
             });
         }
 
@@ -919,7 +1039,7 @@ class FriendManager {
                         <span class="settlement-paid-text">paid</span>
                     </label>
                     <div class="settlement-paid-input-wrapper">
-                        <span class="currency-prefix">$</span>
+                        <span class="currency-prefix">${getCurrencySymbol()}</span>
                         <input type="number" class="settlement-paid" data-fid="${fid}" min="0" step="0.01" ${!checked ? 'disabled placeholder="0"' : ''} ${saved !== undefined && checked ? `value="${saved}"` : ''}>
                     </div>
                 </div>
@@ -967,15 +1087,15 @@ class FriendManager {
         });
         const remain = totalAmount - totalFilled;
         if (remain < 0) {
-            $('#settlement-alert').html(`[Error] The total paid amount exceed the total amount by $${(-remain).toFixed(2)}.`);
+            $('#settlement-alert').html(`[Error] The total paid amount exceed the total amount by ${formatMoney(-remain)}.`);
         } else if (remain > 0 && emptyCount === 0) {
-            $('#settlement-alert').html(`[Error] The total paid amount is less than the total amount by $${remain.toFixed(2)}.`);
+            $('#settlement-alert').html(`[Error] The total paid amount is less than the total amount by $${formatMoney(remain)}.`);
         }
         const placeholderVal = emptyCount > 0 ? Math.max(0, remain / emptyCount) : 0;
         inputs.each((_, el) => {
             const checkbox = $(el).closest('.settlement-paid-row').find('.settlement-checkbox')[0];
             if ($(el).val() === '' && checkbox.checked) {
-                $(el).attr('placeholder', placeholderVal.toFixed(2));
+                $(el).attr('placeholder', formatComputedHint(placeholderVal));
             }
         });
         const balances = [];
@@ -1037,7 +1157,7 @@ class FriendManager {
                                 <span class="settlement-arrow">→</span>
                                 <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(t.to)}" style="background-color:${t.toRgb};">${t.toInitials}</span>
                             </span>
-                            <span class="settlement-amount">$${t.amount.toFixed(2)}</span>
+                            <span class="settlement-amount">${formatMoney(t.amount)}</span>
                         </span>
                     </div>`);
                 });
@@ -1104,9 +1224,11 @@ class FriendManager {
                     required: ['name', 'amount']
                 }
                 },
-                total: { type: 'number', description: 'The total amount printed on the receipt.' }
+                total: { type: 'number', description: 'The total amount printed on the receipt.' },
+                currency: { type: 'string', description: 'ISO 4217 code for the currency on the receipt, e.g., USD, EUR, JPY, TWD. Empty string if it is cannot be determined.' },
+                locale: { type: 'string', description: 'BCP 47 tag for where the receipt is from, e.g., ja-JP, de-DE, zh-TW. Used to format amounts the way that place writes them. Empty string if it cannot be determined.' }
             },
-            required: ['items', 'total']
+            required: ['items', 'total', 'currency', 'locale']
         };
 
         const model = 'gemini-flash-latest';
@@ -1146,7 +1268,9 @@ class FriendManager {
                         if (Array.isArray(jsonData.items)) {
                             data = {
                                 items: jsonData.items,
-                                total: jsonData.total
+                                total: jsonData.total,
+                                currency: jsonData.currency,
+                                locale: jsonData.locale
                             };
                         }
                     } catch (e) {
@@ -1157,7 +1281,8 @@ class FriendManager {
                     console.log('Output:\n', data);
                     if (data) {
                         try {
-                            $('#total-amount-input').val(parseFloat(data.total).toFixed(2));
+                            setMoneyFormat(data.currency, data.locale);
+                            $('#total-amount-input').val(parseFloat(data.total));
                             this.items = new Map();
                             $.each(data.items, (i, item) => {
                                 this.addItem(item.name, item.amount)
@@ -1205,6 +1330,8 @@ class FriendManager {
         if (items.length === 0) {
             return false;
         }
+
+        setMoneyFormat(order.currency, order.locale);
 
         this.items = new Map();
         items.forEach((item) => {
