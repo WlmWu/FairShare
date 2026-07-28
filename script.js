@@ -1199,6 +1199,33 @@ class FriendManager {
         reader.readAsDataURL(file);
     };
 
+    applyHandoffOrder(order) {
+        const items = Array.isArray(order.items) ? order.items : [];
+
+        if (items.length === 0) {
+            return false;
+        }
+
+        this.items = new Map();
+        items.forEach((item) => {
+            const name = item.translatedName || item.originalName || '';
+            const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+            const label = quantity > 1 ? `${name} x${quantity}` : name;
+            const amount = item.unitAmount === null || item.unitAmount === undefined
+                ? undefined
+                : Number(item.unitAmount) * quantity;
+
+            this.addItem(label, amount);
+        });
+
+        this.items.forEach((_, iid) => {
+            $(`#item-collapse-btn-${iid}`).click();
+        });
+
+        document.getElementById('bill-section').scrollIntoView({ behavior: 'smooth' });
+        return true;
+    }
+
 }
 
 
@@ -1210,3 +1237,28 @@ if (urlKey) {
 }
 
 const friendManager = new FriendManager();
+
+(function listenForMenualHandoff() {
+  if (!window.opener) {
+    return;
+  }
+
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+
+    if (!data || data.type !== 'menual:order' || !Array.isArray(data.items)) {
+      return;
+    }
+
+    const handoffKey = String(data.apiKey || '').trim();
+    if (handoffKey) {
+      localStorage.setItem('apiKey', handoffKey);
+    }
+
+    if (friendManager.applyHandoffOrder(data)) {
+      event.source?.postMessage({ type: 'menual:ack' }, event.origin);
+    }
+  });
+
+  window.opener.postMessage({ type: 'menual:ready' }, '*');
+})();
