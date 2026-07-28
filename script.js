@@ -1088,18 +1088,29 @@ class FriendManager {
         3. If a row has a number on the right followed by "TX" (e.g., 10TX means that the amount is 10), it usually indicates that this row is an item.
         4. The total amount is typically found on the last line of the receipt, and any information following it will not be an item.
         5. You can try to understand the content of the receipt to identify which rows might be items, but when outputting, ensure the name matches exactly as it appears on the receipt.
-        6. If all item amounts are integers (i.e., no decimal points), then the amounts on the receipt (including the total amount) will also be integers only.
-        Finally, ensure that the results are returned in a valid JSON format:
-        {
-            "items": [
-                {"name": "item name", "amount": 00.00},
-                ...
-            ],
-            "total": 00.00
-        }`;
+        6. If all item amounts are integers (i.e., no decimal points), then the amounts on the receipt (including the total amount) will also be integers only.`;
+
+        const responseSchema = {
+            type: 'object',
+            properties: {
+                items: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    properties: {
+                    name: { type: 'string', description: 'The item name exactly as printed on the receipt.' },
+                    amount: { type: 'number', description: 'The item amount as a number.' }
+                    },
+                    required: ['name', 'amount']
+                }
+                },
+                total: { type: 'number', description: 'The total amount printed on the receipt.' }
+            },
+            required: ['items', 'total']
+        };
 
         const model = 'gemini-flash-latest';
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -1111,7 +1122,12 @@ class FriendManager {
                         { text: promptMsg },
                         { inline_data: { mime_type: file.type, data: base64Data } }
                     ]
-                }]
+                }],
+                generationConfig: {
+                    temperature: 0.1,
+                    responseMimeType: 'application/json',
+                    responseJsonSchema: responseSchema
+                }
             };
 
             $('#receipt-preview-frame').removeClass('has-preview').addClass('is-processing');
@@ -1120,24 +1136,23 @@ class FriendManager {
                 url: url,
                 type: 'POST',
                 contentType: 'application/json',
+                headers: { 'x-goog-api-key': GOOGLE_API_KEY },
                 data: JSON.stringify(requestData),
                 success: (response) => {
                     let data;
                     const textContent = response.candidates[0].content.parts[0].text;
-                    const regex = /```json\s*([\s\S]*?)\s*```/;
-                    const jsonMatch = textContent.match(regex);
-                    if (jsonMatch && jsonMatch[1]) {
-                        try {
-                            const jsonData = JSON.parse(jsonMatch[1]);
+                    try {
+                        const jsonData = JSON.parse(textContent);
+                        if (Array.isArray(jsonData.items)) {
                             data = {
                                 items: jsonData.items,
                                 total: jsonData.total
                             };
-                        } catch (e) {
-                            console.error('JSON parsing error:', e);
-                            window.alert("[Error] There was an error processing the model's reply. Please try again.");
-                            return;
                         }
+                    } catch (e) {
+                        console.error('JSON parsing error:', e);
+                        window.alert("[Error] There was an error processing the model's reply. Please try again.");
+                        return;
                     }
                     console.log('Output:\n', data);
                     if (data) {
