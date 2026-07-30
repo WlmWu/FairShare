@@ -30,7 +30,7 @@
                     <span class="logo-subtitle">Quick and Easy Expense Sharing</span>
                 </div>
             </div>
-            <button class="info-btn-circle" id="app-info-btn" title="App Info" aria-controls="app-info-popup" aria-expanded="false">
+            <button class="info-btn-circle" id="app-info-btn" title="App Info" aria-controls="app-modal" aria-expanded="false">
                 <i class="fa-solid fa-circle-info"></i>
             </button>
         </header>
@@ -177,14 +177,12 @@
         </section>
     </div>
 
-    <div class="app-info-popup" id="app-info-popup" role="dialog" aria-modal="true" aria-labelledby="app-info-title" hidden>
-        <div class="app-info-panel">
-            <button class="app-info-close" id="app-info-close" aria-label="Close app info">
+    <div class="app-modal" id="app-modal" role="dialog" aria-modal="true" aria-labelledby="app-modal-title" hidden>
+        <div class="app-modal-panel">
+            <button class="modal-close-button" id="app-modal-close" type="button" aria-label="Close window">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-            <h2 id="app-info-title">Shareceipt</h2>
-            <p>Split receipt items, handle fees, and settle up with friends.</p>
-            <p>Prepare your Gemini key, then upload a receipt to get started.</p>
+            <div class="app-modal-body" id="app-modal-body"></div>
         </div>
     </div>
 

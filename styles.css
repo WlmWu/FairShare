@@ -108,7 +108,7 @@ textarea {
     transform: scale(1.1);
 }
 
-.app-info-popup {
+.app-modal {
     position: fixed;
     inset: 0;
     display: flex;
@@ -122,17 +122,20 @@ textarea {
     z-index: 1000;
     transition: var(--transition-smooth);
 }
-.app-info-popup[hidden] {
+.app-modal[hidden] {
     display: none;
 }
-.app-info-popup.is-open {
+.app-modal.is-open {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
 }
-.app-info-panel {
+.app-modal-panel {
     position: relative;
-    width: min(100%, 340px);
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 360px);
+    max-height: calc(100vh - 120px);
     padding: 22px 22px 20px;
     border-radius: var(--radius-lg);
     background-color: var(--bg-card);
@@ -140,10 +143,10 @@ textarea {
     transform: translateY(8px) scale(0.98);
     transition: var(--transition-smooth);
 }
-.app-info-popup.is-open .app-info-panel {
+.app-modal.is-open .app-modal-panel {
     transform: translateY(0) scale(1);
 }
-.app-info-close {
+.modal-close-button {
     position: absolute;
     top: 12px;
     right: 12px;
@@ -159,26 +162,51 @@ textarea {
     justify-content: center;
     transition: var(--transition-smooth);
 }
-.app-info-close:hover {
+.modal-close-button:hover {
     transform: scale(1.08);
 }
-.app-info-panel h2 {
-    margin: 0 34px 12px 0;
+.app-modal-body h2 {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-right: 34px;
+}
+.app-modal-body h2 {
+    margin: 0 0 12px;
     color: var(--primary-color);
     font-family: var(--font-head);
     font-size: 20px;
     font-weight: 700;
 }
-.app-info-panel p {
+.app-modal-body p {
     margin: 0;
     color: var(--text-main);
     font-family: var(--font-body);
     font-size: 14px;
     line-height: 1.55;
 }
-.app-info-panel p + p {
+.app-modal-body p + p {
     margin-top: 8px;
     color: var(--text-muted);
+}
+.modal-editor-input {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: var(--radius-sm);
+  background-color: #ffffff;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  box-sizing: border-box;
+  transition: var(--transition-smooth);
+}
+.modal-editor-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(11, 95, 89, 0.12);
 }
 
 /* ==========================================

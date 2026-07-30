@@ -271,6 +271,105 @@ function amountFromJson(value) {
   return value === null || value === undefined ? NaN : Number(value);
 }
 
+let modalResolver = null;
+
+function showAppModal({ title = '', message = '', input = null }) {
+    if (modalResolver) {
+        closeAppModal();
+    }
+
+    const body = $('#app-modal-body');
+    body.empty();
+
+    if (title) {
+        body.append($('<h2 id="app-modal-title"></h2>').text(title));
+    }
+
+    String(message).split('\n').filter(line => line !== '').forEach(line => {
+        body.append($('<p></p>').text(line));
+    });
+
+    let editorInput = null;
+    if (input) {
+        editorInput = $('<input class="modal-editor-input" autocomplete="off">')
+        .attr('type', input.type || 'text')
+        .attr('placeholder', input.placeholder || '')
+        .val(input.value || '');
+        body.append(editorInput);
+    }
+
+    const modal = $('#app-modal');
+    modal.prop('hidden', false);
+    requestAnimationFrame(() => {
+        modal.addClass('is-open');
+        setTimeout(() => {
+        const target = editorInput || $('#app-modal-close');
+        target.trigger('focus');
+        if (editorInput) {
+            editorInput[0].select();
+        }
+        }, 0);
+    });
+
+    return new Promise(resolve => {
+        modalResolver = { resolve, onInput: input?.onInput };
+    });
+}
+
+function closeAppModal() {
+    const modal = $('#app-modal');
+
+    if (modal.prop('hidden')) {
+        return;
+    }
+
+    const pending = modalResolver;
+    modalResolver = null;
+    modal.removeClass('is-open');
+    setTimeout(() => {
+        if (!modal.hasClass('is-open')) {
+            modal.prop('hidden', true);
+        }
+    }, 180);
+
+    if (pending) {
+        pending.resolve();
+    }
+}
+
+function showAppAlert(title, message = '') {
+    return showAppModal({ title, message });
+}
+
+function showAppEditor(title, { value = '', placeholder = '', type = 'text', onInput } = {}) {
+    return showAppModal({ title, input: { value, placeholder, type, onInput } });
+}
+
+function attachAppModalEvents() {
+    const modal = $('#app-modal');
+
+    $('#app-modal-close').on('click', () => closeAppModal());
+    modal.on('click', (event) => {
+        if (event.target === event.currentTarget) {
+            closeAppModal();
+        }
+    });
+    modal.on('input', '.modal-editor-input', (event) => {
+        modalResolver?.onInput?.($(event.target).val());
+    });
+    modal.on('keydown', '.modal-editor-input', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            closeAppModal();
+        }
+    });
+    $(document).on('keydown', (event) => {
+        if (event.key === 'Escape' && modal.hasClass('is-open')) {
+            closeAppModal();
+        }
+    });
+}
+
 class FriendManager {
     constructor() {
         this.friends = new Map();
@@ -1073,7 +1172,7 @@ class FriendManager {
                     })
                     .catch(err => {
                         console.error('Failed to copy text: ', err);
-                        alert('Failed to copy. Please copy manually.');
+                        showAppAlert('Copy Failed', 'Select the summary and copy it manually.');
                     });
             });
         });
@@ -1162,35 +1261,13 @@ class FriendManager {
             document.getElementById('bill-section').scrollIntoView({ behavior: 'smooth' });
         });
 
-        const $appInfoPopup = $('#app-info-popup');
-        const openAppInfo = () => {
-            $appInfoPopup.prop('hidden', false);
-            requestAnimationFrame(() => {
-                $appInfoPopup.addClass('is-open');
-                $('#app-info-btn').attr('aria-expanded', 'true');
-                $('#app-info-close').trigger('focus');
-            });
-        };
-        const closeAppInfo = () => {
-            $appInfoPopup.removeClass('is-open');
+        $('#app-info-btn').on('click', async () => {
+        $('#app-info-btn').attr('aria-expanded', 'true');
+            await showAppAlert(
+                'Shareceipt',
+                'Split receipt items, handle fees, and settle up with friends.\nPrepare your Gemini key, then upload a receipt to get started.'
+            );
             $('#app-info-btn').attr('aria-expanded', 'false').trigger('focus');
-            setTimeout(() => {
-                if (!$appInfoPopup.hasClass('is-open')) {
-                    $appInfoPopup.prop('hidden', true);
-                }
-            }, 180);
-        };
-        $('#app-info-btn').on('click', openAppInfo);
-        $('#app-info-close').on('click', closeAppInfo);
-        $appInfoPopup.on('click', (event) => {
-            if (event.target === event.currentTarget) {
-                closeAppInfo();
-            }
-        });
-        $(document).on('keydown', (event) => {
-            if (event.key === 'Escape' && $appInfoPopup.hasClass('is-open')) {
-                closeAppInfo();
-            }
         });
 
         let settlementScrollFrame = null;
@@ -1249,11 +1326,10 @@ class FriendManager {
 
         this.bindAmountEvents();
 
-        $('#receipt-upload-btn').on('click', () => {
+        $('#receipt-upload-btn').on('click', async () => {
             const key = localStorage.getItem('apiKey')
             if (key === null || key === '') {
-                if (!this.setGeminiKey()) {
-                    window.alert('Provide API key to use this feature.')
+                if (!await this.setGeminiKey()) {
                     return;
                 }
             }
@@ -1426,27 +1502,41 @@ class FriendManager {
         }
     }
 
-    editName(id) {
+    async editName(id) {
         const friend = this.friends.get(id);
-        if (friend) {
-            const newName = prompt('Rename:', friend.name);
-            if (newName !== null && newName.trim() !== '') {
-                friend.name = newName.trim();
-                this.updateFriendList();
-            } else if (newName.trim() === '') {
-                alert('Friend name cannot be empty or contain only spaces.');
-            }
+
+        if (!friend) {
+            return;
         }
+
+        const originalName = friend.name;
+
+        await showAppEditor('Rename', {
+            value: originalName,
+            placeholder: 'Name',
+            onInput: (value) => {
+            friend.name = value.trim() === '' ? originalName : value.trim();
+            this.updateFriendList();
+            }
+        });
     }
 
-    setGeminiKey() {
-        const userInput = prompt("Please type in your Gemini API key", localStorage.getItem('apiKey') || '');
-        if (userInput) {
-            localStorage.setItem('apiKey', userInput);
-            return true;
-        } else {
-            return false;
-        }
+    async setGeminiKey() {
+        await showAppEditor('Gemini API key', {
+            value: localStorage.getItem('apiKey') || '',
+            placeholder: 'Paste your API key',
+            onInput: (value) => {
+            const key = value.trim();
+
+            if (key) {
+                localStorage.setItem('apiKey', key);
+            } else {
+                localStorage.removeItem('apiKey');
+            }
+            }
+        });
+
+        return Boolean(localStorage.getItem('apiKey'));
     }
 
     showReceiptPreview(file) {
@@ -1536,7 +1626,7 @@ class FriendManager {
                         }
                     } catch (e) {
                         console.error('JSON parsing error:', e);
-                        window.alert("[Error] There was an error processing the model's reply. Please try again.");
+                        showAppAlert('Could not read the reply', "The model's reply was not in the expected shape. Please try again.");
                         return;
                     }
                     console.log('Output:\n', data);
@@ -1558,10 +1648,10 @@ class FriendManager {
                             document.getElementById('bill-section').scrollIntoView({ behavior: 'smooth' });
                         } catch (e) {
                             console.error('JSON parsing error:', e);
-                            window.alert("[Error] There was an error processing the model's reply. Please try again.");
+                            showAppAlert('Could not read the reply', "The model's reply was not in the expected shape. Please try again.");
                         }
                     } else {
-                        window.alert('[Error] No items on the receipt were found. Please try again.');
+                        showAppAlert('No items found', "Nothing on this receipt could be read. Try a sharper photo.");
                     }
                 },
                 error: (xhr, status, error) => {
@@ -1570,7 +1660,7 @@ class FriendManager {
                         errorMessage = xhr.responseJSON.error.message;
                         console.error('Error message:', errorMessage);
                     }
-                    window.alert(`[Error] ${errorMessage}`);
+                    showAppAlert('Scan failed', errorMessage);
                     if (errorMessage.toLowerCase().includes('key') && errorMessage.toLowerCase().includes('valid')) {
                         localStorage.setItem('apiKey', '');
                     }
@@ -1623,6 +1713,8 @@ if (urlKey) {
     localStorage.setItem('apiKey', urlKey);
     history.replaceState(null, '', window.location.pathname);
 }
+
+attachAppModalEvents();
 
 const friendManager = new FriendManager();
 
