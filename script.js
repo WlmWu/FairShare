@@ -291,8 +291,7 @@ function showAppModal({ title = '', message = '', input = null }) {
 
     let editorInput = null;
     if (input) {
-        editorInput = $('<input class="modal-editor-input" autocomplete="off">')
-        .attr('type', input.type || 'text')
+        editorInput = $('<input type="text" class="modal-editor-input" autocomplete="off">')
         .attr('placeholder', input.placeholder || '')
         .val(input.value || '');
         body.append(editorInput);
@@ -341,8 +340,8 @@ function showAppAlert(title, message = '') {
     return showAppModal({ title, message });
 }
 
-function showAppEditor(title, { value = '', placeholder = '', type = 'text', onInput } = {}) {
-    return showAppModal({ title, input: { value, placeholder, type, onInput } });
+function showAppEditor(title, { value = '', placeholder = '', onInput } = {}) {
+    return showAppModal({ title, input: { value, placeholder, onInput } });
 }
 
 function attachAppModalEvents() {
@@ -367,6 +366,139 @@ function attachAppModalEvents() {
         if (event.key === 'Escape' && modal.hasClass('is-open')) {
             closeAppModal();
         }
+    });
+}
+
+const API_KEY_STORAGE_KEY = 'apiKey';
+const MODEL_STORAGE_KEY = 'shareceipt.geminiModel';
+const DEFAULT_MODEL_CHOICE = 'flash';
+const GEMINI_MODELS = {
+    flash: { label: 'Flash', apiModel: 'gemini-flash-latest', hint: 'More detailed' },
+    lite: { label: 'Lite', apiModel: 'gemini-flash-lite-latest', hint: 'Quicker' }
+};
+
+function getSelectedModelChoice() {
+    const storedChoice = localStorage.getItem(MODEL_STORAGE_KEY);
+    return Object.hasOwn(GEMINI_MODELS, storedChoice) ? storedChoice : DEFAULT_MODEL_CHOICE;
+}
+
+function getSelectedModel() {
+    return GEMINI_MODELS[getSelectedModelChoice()].apiModel;
+}
+
+function setSelectedModelChoice(choice) {
+    const nextChoice = Object.hasOwn(GEMINI_MODELS, choice) ? choice : DEFAULT_MODEL_CHOICE;
+
+    localStorage.setItem(MODEL_STORAGE_KEY, nextChoice);
+    renderModelChoice(nextChoice);
+    refreshKeyChip();
+}
+
+function renderModelChoice(choice) {
+    $('input[name="geminiModel"]').each((_, input) => {
+        input.checked = input.value === choice;
+    });
+    $('#model-choice-hint').text(GEMINI_MODELS[choice].hint);
+}
+
+function refreshKeyChip() {
+    const hasKey = Boolean((localStorage.getItem(API_KEY_STORAGE_KEY) || '').trim());
+
+    $('#key-chip-model').text(GEMINI_MODELS[getSelectedModelChoice()].label);
+    $('#key-chip-check').prop('hidden', !hasKey);
+    $('#update-api-key-btn').toggleClass('is-set', hasKey);
+    $('#key-modal-clear').prop('disabled', !hasKey);
+}
+
+function writeApiKey(value) {
+    const key = String(value).trim();
+
+    if (key) {
+        localStorage.setItem(API_KEY_STORAGE_KEY, key);
+    } else {
+        localStorage.removeItem(API_KEY_STORAGE_KEY);
+    }
+
+    refreshKeyChip();
+}
+
+let keyModalResolver = null;
+
+function openKeyModal() {
+    const modal = $('#key-modal');
+    const input = $('#key-modal-input');
+
+    input.val(localStorage.getItem(API_KEY_STORAGE_KEY) || '');
+    renderModelChoice(getSelectedModelChoice());
+    refreshKeyChip();
+    modal.prop('hidden', false);
+    requestAnimationFrame(() => {
+        modal.addClass('is-open');
+        setTimeout(() => input.trigger('focus'), 0);
+    });
+
+    return new Promise(resolve => {
+        keyModalResolver = resolve;
+    });
+}
+
+function closeKeyModal() {
+    const modal = $('#key-modal');
+
+    if (modal.prop('hidden')) {
+        return;
+    }
+
+    const resolve = keyModalResolver;
+    keyModalResolver = null;
+    modal.removeClass('is-open');
+    setTimeout(() => {
+        if (!modal.hasClass('is-open')) {
+        modal.prop('hidden', true);
+        }
+    }, 180);
+
+    if (resolve) {
+        resolve();
+    }
+}
+
+function attachKeyModalEvents() {
+    const modal = $('#key-modal');
+
+    $('#key-modal-close').on('click', closeKeyModal);
+    modal.on('click', (event) => {
+        if (event.target === event.currentTarget) {
+        closeKeyModal();
+        }
+    });
+    $(document).on('keydown', (event) => {
+        if (event.key === 'Escape' && modal.hasClass('is-open')) {
+        closeKeyModal();
+        }
+    });
+
+    $('#key-modal-input').on('input', (event) => writeApiKey($(event.target).val()));
+    $('#key-modal-input').on('keydown', (event) => {
+        if (event.key === 'Enter') {
+        event.preventDefault();
+        closeKeyModal();
+        }
+    });
+
+    $('#key-modal-input').on('pointerdown', () => {
+        setTimeout(() => $('#key-modal-input')[0].select(), 0);
+    });
+
+    $('#key-modal-clear').on('click', () => {
+        $('#key-modal-input').val('');
+        writeApiKey('');
+        $('#key-modal-input').trigger('focus');
+    });
+
+    $('#model-choice-field').on('click', '.model-choice-control', (event) => {
+        event.preventDefault();
+        setSelectedModelChoice(getSelectedModelChoice() === 'flash' ? 'lite' : 'flash');
     });
 }
 
@@ -1327,7 +1459,7 @@ class FriendManager {
         this.bindAmountEvents();
 
         $('#receipt-upload-btn').on('click', async () => {
-            const key = localStorage.getItem('apiKey')
+            const key = localStorage.getItem(API_KEY_STORAGE_KEY);
             if (key === null || key === '') {
                 if (!await this.setGeminiKey()) {
                     return;
@@ -1347,7 +1479,7 @@ class FriendManager {
             $(event.target).val(null);
         });
         $('#update-api-key-btn').on('click', () => {
-            this.setGeminiKey();
+            openKeyModal();
         });
     }
 
@@ -1522,21 +1654,9 @@ class FriendManager {
     }
 
     async setGeminiKey() {
-        await showAppEditor('Gemini API key', {
-            value: localStorage.getItem('apiKey') || '',
-            placeholder: 'Paste your API key',
-            onInput: (value) => {
-            const key = value.trim();
+        await openKeyModal();
 
-            if (key) {
-                localStorage.setItem('apiKey', key);
-            } else {
-                localStorage.removeItem('apiKey');
-            }
-            }
-        });
-
-        return Boolean(localStorage.getItem('apiKey'));
+        return Boolean(localStorage.getItem(API_KEY_STORAGE_KEY));
     }
 
     showReceiptPreview(file) {
@@ -1582,7 +1702,7 @@ class FriendManager {
             required: ['items', 'total', 'currency', 'locale']
         };
 
-        const model = 'gemini-flash-latest';
+        const model = getSelectedModel();
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
         const reader = new FileReader();
@@ -1662,7 +1782,7 @@ class FriendManager {
                     }
                     showAppAlert('Scan failed', errorMessage);
                     if (errorMessage.toLowerCase().includes('key') && errorMessage.toLowerCase().includes('valid')) {
-                        localStorage.setItem('apiKey', '');
+                        writeApiKey('');
                     }
                 },
                 complete: () => {
@@ -1715,6 +1835,8 @@ if (urlKey) {
 }
 
 attachAppModalEvents();
+attachKeyModalEvents();
+refreshKeyChip();
 
 const friendManager = new FriendManager();
 
@@ -1732,7 +1854,7 @@ const friendManager = new FriendManager();
 
     const handoffKey = String(data.apiKey || '').trim();
     if (handoffKey) {
-      localStorage.setItem('apiKey', handoffKey);
+      writeApiKey(handoffKey);
     }
 
     if (friendManager.applyHandoffOrder(data)) {

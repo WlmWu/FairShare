@@ -38,9 +38,11 @@
         <!-- Card 1: Scan / New Split Bill -->
         <section class="app-card">
             <div class="card-header-bar">
-                Use your API key to scan
-                <button id="update-api-key-btn" title="Update API Key" class="key-badge-btn">
-                    <i class="fa-solid fa-key"></i>
+                Receipt
+                <button id="update-api-key-btn" class="key-chip" type="button" title="Gemini settings" aria-label="Gemini settings" aria-controls="key-modal">
+                    <i class="fa-solid fa-key" aria-hidden="true"></i>
+                    <span id="key-chip-model" class="key-chip-value">Flash</span>
+                    <i id="key-chip-check" class="fa-solid fa-check key-check-icon" aria-hidden="true" hidden></i>
                 </button>
             </div>
             <div class="card-body text-center">
@@ -183,6 +185,40 @@
                 <i class="fa-solid fa-xmark"></i>
             </button>
             <div class="app-modal-body" id="app-modal-body"></div>
+        </div>
+    </div>
+
+    <div class="app-modal" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-modal-title" hidden>
+        <div class="app-modal-panel">
+            <button class="modal-close-button" id="key-modal-close" type="button" aria-label="Close Gemini settings">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="app-modal-body">
+                <h2 id="key-modal-title">Gemini</h2>
+                <label class="key-modal-label" for="key-modal-input">API key</label>
+                <div class="key-input-row">
+                    <input id="key-modal-input" class="modal-editor-input" type="password" autocomplete="off" placeholder="Paste your API key">
+                    <button id="key-modal-clear" class="key-clear-button" type="button" aria-label="Clear API key">
+                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <fieldset class="model-choice-field" id="model-choice-field">
+                    <legend>Model</legend>
+                    <div class="model-choice-control">
+                        <div class="model-switch">
+                            <label>
+                                <input type="radio" name="geminiModel" value="flash">
+                                <span>Flash</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="geminiModel" value="lite">
+                                <span>Lite</span>
+                            </label>
+                        </div>
+                        <span id="model-choice-hint" class="model-choice-hint">More detailed</span>
+                    </div>
+                </fieldset>
+            </div>
         </div>
     </div>
 
