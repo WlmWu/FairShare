@@ -112,14 +112,14 @@
                             <i class="fa-solid fa-angle-down" style="font-size: 14px;"></i>
                         </button>
                         <div id="total-amount-title" class="summary-amount-title">
-                            Total Amount&emsp;<span id="total-amount">$0.00</span>
+                            Total<span id="total-amount">$0.00</span>
                         </div>
                     </div>
 
                     <div class="collapse show" id="detail-amount-container">
                         <div class="detail-amount-content">
                             <div class="summary-detail-row">
-                                <span class="detail-label">Subtotal Amount</span>
+                                <span class="detail-label">Subtotal</span>
                                 <span class="detail-value"><span id="subtotal-amount">$0.00</span></span>
                             </div>
                             <div class="summary-detail-row align-items-center">
@@ -131,7 +131,7 @@
                             </div>
                             <div class="summary-detail-row align-items-center border-top pt-3 mt-2">
                                 <span class="detail-label font-bold total-amount-detail-label">
-                                    Total Amount
+                                    Total
                                     <span class="mytooltip" id="total-amount-tooltip">
                                         <i class="fa-regular fa-circle-question"></i>
                                         <span class="tooltiptext">
@@ -159,12 +159,16 @@
                     <!-- Populated dynamically by JS -->
                 </div>
                 <div id="settlement-section" class="collapse">
-                    <div class="section-divider"></div>
                     <span id="settlement-alert" class="alert-text"></span>
-                    <div id="settlement-paid-inputs"></div>
-                    <div class="pt-1 pb-3" id="settlement-output"></div>
+                    <div class="settlement-group">
+                        <span class="settlement-group-label">Who paid</span>
+                        <div id="settlement-paid-inputs"></div>
+                    </div>
+                    <div class="settlement-group">
+                        <span class="settlement-group-label">Transfers</span>
+                        <div id="settlement-output"></div>
+                    </div>
                 </div>
-
                 <div class="result-actions">
                     <button id="settlement-toggle-btn" class="btn-share-action" ontouchstart="" data-bs-toggle="collapse" data-bs-target="#settlement-section">
                         <i class="fa-solid fa-money-bill-transfer"></i>

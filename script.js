@@ -818,7 +818,7 @@ class FriendManager {
             // remove friends removed
             const existingFriendIds = new Set(this.friends.keys());
             itemFriendsDiv.children('.item-friend').each((_, div) => {
-                let friendId = parseInt($(div).find('label').attr('for').split('-')[3]);
+                let friendId = parseInt($(div).find('label.item-friend-name').attr('for').split('-')[3]);
                 if (!existingFriendIds.has(friendId)) {
                     $(div).remove();
                     item.removeParticipant(friendId);
@@ -831,6 +831,10 @@ class FriendManager {
                     itemFriendsDiv.append(`
                         <div class="item-friend">
                             <input type="checkbox" id="item-${itemId}-friend-${friend.id}" checked>
+                            <label for="item-${itemId}-friend-${friend.id}" class="participant-toggle-box" aria-label="Include in this item">
+                                <i class="fa-solid fa-xmark active-icon"></i>
+                                <i class="fa-solid fa-plus inactive-icon"></i>
+                            </label>
                             <label for="item-${itemId}-friend-${friend.id}" class="item-friend-name" style="border: 1.5px solid black; border-radius: 6px; background-color:${friend.rgbString};" >
                             </label>
                         </div>
@@ -839,15 +843,15 @@ class FriendManager {
             });
 
             itemFriendsDiv.children('.item-friend').each((_, div) => {
-                let itemId = parseInt($(div).find('label').attr('for').split('-')[1]);
-                let friendId = parseInt($(div).find('label').attr('for').split('-')[3]);
+                let itemId = parseInt($(div).find('label.item-friend-name').attr('for').split('-')[1]);
+                let friendId = parseInt($(div).find('label.item-friend-name').attr('for').split('-')[3]);
                 let item = this.items.get(itemId)
                 const percentage = item.getParticipantPercentage(friendId);
                 let friend = this.friends.get(friendId);
 
                 const initials = this.getFriendInitials(friend);
 
-                $($(div).find('label')).html( `
+                $($(div).find('label.item-friend-name')).html( `
                     <div class="participant-row-inner">
                         <div class="participant-avatar" style="background-color: ${friend.rgbString};" title="${friend.name}">
                             ${initials}
@@ -855,10 +859,6 @@ class FriendManager {
                         <div class="participant-input-wrapper">
                             <input type="number" value="${percentage}" min="0" max="100" step="1" class="percentage-input" ${item.getParticipantChecked(friendId) === false ? "disabled" : ""}>
                             <span class="unit-text">${item.getUnitType() == ItemType.kTypePercent ? '%' : 'share(s)'}</span>
-                        </div>
-                        <div class="participant-toggle-box">
-                            <i class="fa-solid fa-minus active-icon"></i>
-                            <i class="fa-solid fa-plus inactive-icon"></i>
                         </div>
                     </div>
                 `);
@@ -944,6 +944,7 @@ class FriendManager {
                         <div class="item-container collapse show" id="item-container-${item.id}">
                             <div class="item-details-body">
                                 <div class="item-unit-row">
+                                    <span class="item-unit-label">Split between</span>
                                     <button class="btn-unit-toggle unit-btn" ontouchstart=""><i class="fa-solid fa-repeat"></i> Unit</button>
                                 </div>
                                 <div id="item-friends-${item.id}" class="item-friends"></div>
@@ -1089,17 +1090,20 @@ class FriendManager {
         $('#items-list .item-friends .participant-input-wrapper').off('click').on('click', function(e) {
             const itemFriend = $(e.currentTarget).closest('.item-friend');
             const checkbox = itemFriend.find('input[type="checkbox"]')[0];
-            if (checkbox.checked) return;
 
             e.preventDefault();
-            checkbox.checked = true;
-            $(checkbox).trigger('change');
+
+            if (!checkbox.checked) {
+                checkbox.checked = true;
+                $(checkbox).trigger('change');
+            }
+
             itemFriend.find('.percentage-input').trigger('focus');
         });
 
         $('#items-list .item-friends .percentage-input').off('input').on('input', function(e) {
-            const itemId = parseInt($(e.target).closest('label').attr('for').split('-')[1]);
-            const friendId = parseInt($(e.target).closest('label').attr('for').split('-')[3]);
+            const itemId = parseInt($(e.target).closest('label.item-friend-name').attr('for').split('-')[1]);
+            const friendId = parseInt($(e.target).closest('label.item-friend-name').attr('for').split('-')[3]);
             const input = parseFloat(e.target.value);
             this.items.get(itemId).setParticipant(friendId, input);
             this.calculate();
@@ -1366,16 +1370,19 @@ class FriendManager {
         $('#detail-amount-container').off('hide.bs.collapse').on('hide.bs.collapse', (e) => {
             $('.total-amount-container .collapse-btn .fa-angle-down').hide();
             $('.total-amount-container .collapse-btn .fa-angle-right').show();
+            $('.total-amount-container').addClass('is-collapsed');
         });
         $('#detail-amount-container').off('show.bs.collapse').on('show.bs.collapse', (e) => {
             $('.total-amount-container .collapse-btn .fa-angle-down').show();
             $('.total-amount-container .collapse-btn .fa-angle-right').hide();
+            $('.total-amount-container').removeClass('is-collapsed');
         });
-        $('.total-amount-container .summary-toggle-header').off('click').on('click', (e) => {
-            if ($(e.target).closest('.collapse-btn').length) {
+        $('.total-amount-container').off('click.summaryToggle').on('click.summaryToggle', (e) => {
+            if ($(e.target).closest('.collapse-btn, input, label, .mytooltip').length) {
                 return;
             }
-            $(e.currentTarget).find('.collapse-btn').trigger('click');
+
+            $(e.currentTarget).find('.summary-toggle-header .collapse-btn').trigger('click');
         });
     }
 
@@ -1505,7 +1512,6 @@ class FriendManager {
                     <input type="checkbox" id="settlement-check-${fid}" class="settlement-checkbox" data-fid="${fid}" ${checked ? 'checked' : ''}>
                     <label for="settlement-check-${fid}" class="settlement-paid-label">
                         <span class="result-avatar settlement-avatar" title="${this.escapeAttribute(friend.name)}" style="background-color:${friend.rgbString};">${this.getFriendInitials(friend)}</span>
-                        <span class="settlement-paid-text">paid</span>
                     </label>
                     <div class="settlement-paid-input-wrapper">
                         <span class="currency-prefix">${getCurrencySymbol()}</span>
