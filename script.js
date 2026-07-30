@@ -234,6 +234,43 @@ function formatPercentHint(value) {
   return String(Number(number.toFixed(4)));
 }
 
+const BILL_STORAGE_KEY = 'shareceipt.bill';
+const BILL_STORAGE_VERSION = 1;
+const BILL_SAVE_DELAY_MS = 250;
+
+function readStoredBill() {
+  try {
+    const value = sessionStorage.getItem(BILL_STORAGE_KEY);
+
+    if (!value) {
+      return null;
+    }
+
+    const snapshot = JSON.parse(value);
+
+    return snapshot && snapshot.version === BILL_STORAGE_VERSION ? snapshot : null;
+  } catch (e) {
+    console.warn('Could not read the saved bill.', e);
+    return null;
+  }
+}
+
+function writeStoredBill(snapshot) {
+  try {
+    sessionStorage.setItem(BILL_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch (e) {
+    console.warn('Could not save the bill for reload.', e);
+  }
+}
+
+function amountToJson(value) {
+  return Number.isFinite(value) ? value : null;
+}
+
+function amountFromJson(value) {
+  return value === null || value === undefined ? NaN : Number(value);
+}
+
 class FriendManager {
     constructor() {
         this.friends = new Map();
@@ -242,8 +279,12 @@ class FriendManager {
         this.itemsListElement = $('#items-list');
         this.receiptPreviewUrl = null;
         this.pendingReceiptPreviewFile = null;
-        this.initializeFriends();
-        this.initializeItems();
+        this.isRestoringBill = false;
+        this.billSaveTimer = 0;
+        if (!this.restoreBill()) {
+            this.initializeFriends();
+            this.initializeItems();
+        }
         this.attachEventListeners();
     }
 
@@ -254,6 +295,212 @@ class FriendManager {
     initializeItems() {
         this.itemsListElement.empty();
         this.addItem();
+    }
+
+    restoreBill() {
+        const snapshot = readStoredBill();
+
+        if (!snapshot) {
+            return false;
+        }
+
+        this.isRestoringBill = true;
+
+        try {
+            return this.applyBillSnapshot(snapshot);
+        } catch (e) {
+            console.warn('Could not restore the saved bill.', e);
+            this.friends = new Map();
+            this.items = new Map();
+            Friend.nextId = Friend.primaryId;
+            Item.nextId = 1;
+            this.friendListElement.empty();
+            this.itemsListElement.empty();
+            $('#settlement-paid-inputs').empty();
+            return false;
+        } finally {
+            this.isRestoringBill = false;
+        }
+    }
+
+    applyBillSnapshot(snapshot) {
+        const savedFriends = Array.isArray(snapshot.friends) ? snapshot.friends : [];
+        const savedItems = Array.isArray(snapshot.items) ? snapshot.items : [];
+
+        if (!savedFriends.some(entry => Number(entry?.id) === Friend.primaryId)) {
+            return false;
+        }
+
+        const friends = new Map();
+
+        if (Number.isFinite(snapshot.hueOffset)) {
+            Friend.hueOffset = snapshot.hueOffset;
+        }
+
+        savedFriends.forEach(entry => {
+            const id = Number(entry?.id);
+
+            if (!Number.isInteger(id) || friends.has(id)) {
+            return;
+            }
+
+            const friend = new Friend(String(entry?.name ?? ''));
+            friend.id = id;
+            friend.hsl = friend.generateColor();
+            friends.set(id, friend);
+        });
+
+        const items = new Map();
+        const collapsedItemIds = new Set();
+        savedItems.forEach(entry => {
+            const id = Number(entry?.id);
+
+            if (!Number.isInteger(id) || items.has(id)) {
+            return;
+            }
+
+            const item = new Item(String(entry?.name ?? ''), amountFromJson(entry?.amount));
+            item.id = id;
+            item.unitType = entry?.unitType === ItemType.kTypeShare ? ItemType.kTypeShare : ItemType.kTypePercent;
+
+            const savedParticipants = Array.isArray(entry?.participants) ? entry.participants : [];
+            savedParticipants.forEach(participant => {
+            const fid = Number(participant?.fid);
+
+            if (!friends.has(fid)) {
+                return;
+            }
+
+            item.setParticipant(fid, amountFromJson(participant?.percentage), participant?.checked !== false);
+            });
+
+            if (entry?.collapsed) {
+            collapsedItemIds.add(id);
+            }
+
+            items.set(id, item);
+        });
+
+        Friend.nextId = Array.from(friends.keys()).reduce((next, id) => Math.max(next, id + 1), Friend.primaryId);
+        Item.nextId = Array.from(items.keys()).reduce((next, id) => Math.max(next, id + 1), 1);
+
+        setMoneyFormat(snapshot.currency, snapshot.locale);
+
+        this.friends = friends;
+        this.items = items;
+        this.friendListElement.empty();
+        this.itemsListElement.empty();
+        this.updateFriendList();
+        this.updateItemsList();
+
+        $('#total-amount-input').val(typeof snapshot.totalAmountInput === 'string' ? snapshot.totalAmountInput : '');
+        $('#total-amount-additional').val(typeof snapshot.additionalFee === 'string' ? snapshot.additionalFee : '');
+
+        this.items.forEach((item, itemId) => {
+            item.participants.forEach((participant, fid) => {
+            const checkbox = $(`#item-${itemId}-friend-${fid}`)[0];
+
+            if (checkbox) {
+                checkbox.checked = participant.checked !== false;
+            }
+            });
+
+            if (collapsedItemIds.has(itemId)) {
+            $(`#item-collapse-btn-${itemId}`).click();
+            }
+        });
+
+        this.applySettlementSnapshot(snapshot);
+        this.calculate();
+        return true;
+    }
+
+    applySettlementSnapshot(snapshot) {
+        const savedRows = Array.isArray(snapshot.settlement) ? snapshot.settlement : [];
+
+        savedRows.forEach(row => {
+            const input = $(`.settlement-paid[data-fid="${Number(row?.fid)}"]`);
+            const checkbox = input.closest('.settlement-paid-row').find('.settlement-checkbox')[0];
+
+            if (!input.length || !checkbox) {
+            return;
+            }
+
+            checkbox.checked = row?.checked === true;
+            input[0].disabled = !checkbox.checked;
+            input.val(checkbox.checked && typeof row?.paid === 'string' ? row.paid : '');
+            input.attr('placeholder', checkbox.checked ? '' : '0');
+        });
+
+        if (snapshot.settlementOpen) {
+            $('#settlement-section').addClass('show');
+        }
+    }
+
+    createBillSnapshot() {
+        return {
+            version: BILL_STORAGE_VERSION,
+            savedAt: Date.now(),
+            currency: moneyFormat.currency,
+            locale: moneyFormat.locale,
+            hueOffset: Friend.hueOffset,
+            friends: Array.from(this.friends.values(), friend => ({
+            id: friend.id,
+            name: friend.name
+            })),
+            items: Array.from(this.items.values(), item => ({
+            id: item.id,
+            name: item.name,
+            amount: amountToJson(item.amount),
+            unitType: item.unitType,
+            collapsed: this.itemsListElement.find(`.item[data-id="${item.id}"]`).hasClass('is-collapsed'),
+            participants: Array.from(item.participants, ([fid, participant]) => ({
+                fid,
+                percentage: amountToJson(participant.percentage),
+                checked: participant.checked !== false
+            }))
+            })),
+            totalAmountInput: String($('#total-amount-input').val() ?? ''),
+            additionalFee: String($('#total-amount-additional').val() ?? ''),
+            settlementOpen: $('#settlement-section').hasClass('show'),
+            settlement: $('.settlement-paid').map((_, el) => {
+            const checkbox = $(el).closest('.settlement-paid-row').find('.settlement-checkbox')[0];
+
+            return {
+                fid: parseInt($(el).data('fid'), 10),
+                checked: Boolean(checkbox && checkbox.checked),
+                paid: String($(el).val() ?? '')
+            };
+            }).get()
+        };
+    }
+
+    scheduleBillSave() {
+        if (this.isRestoringBill) {
+            return;
+        }
+
+        if (this.billSaveTimer) {
+            window.clearTimeout(this.billSaveTimer);
+        }
+
+        this.billSaveTimer = window.setTimeout(() => {
+            this.billSaveTimer = 0;
+            this.saveBillNow();
+        }, BILL_SAVE_DELAY_MS);
+        }
+
+        saveBillNow() {
+        if (this.isRestoringBill) {
+            return;
+        }
+
+        if (this.billSaveTimer) {
+            window.clearTimeout(this.billSaveTimer);
+            this.billSaveTimer = 0;
+        }
+
+        writeStoredBill(this.createBillSnapshot());
     }
 
     addFriend(name) {
@@ -515,6 +762,7 @@ class FriendManager {
             itemdiv.find('.item-expanded-row .collapse-btn i')
                 .removeClass('fa-caret-up')
                 .addClass('fa-caret-down');
+            this.scheduleBillSave();
         });
 
         $('#items-list .item .item-container').off('show.bs.collapse').on('show.bs.collapse', (e) => {
@@ -523,6 +771,7 @@ class FriendManager {
             itemdiv.find('.item-expanded-row .collapse-btn i')
                 .removeClass('fa-caret-down')
                 .addClass('fa-caret-up');
+            this.scheduleBillSave();
         });
 
         $('#items-list .item .item-collapsed-row').off('click').on('click', (e) => {
@@ -719,6 +968,7 @@ class FriendManager {
         this.showResult(originalAmount, totalAmount, results);
         const transfers = this.calculateSettlement(totalAmount, results);
         this.showSettlement(transfers);
+        this.scheduleBillSave();
         return [originalAmount, totalAmount, results, transfers];
     }
 
@@ -970,6 +1220,17 @@ class FriendManager {
                 settlementScrollFrame = null;
             }
             scrollToPageBottom();
+            this.scheduleBillSave();
+        });
+        $('#settlement-section').off('hidden.bs.collapse').on('hidden.bs.collapse', () => {
+            this.scheduleBillSave();
+        });
+
+        window.addEventListener('pagehide', () => this.saveBillNow());
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                this.saveBillNow();
+            }
         });
 
         $('#share-result-btn').on('click', async () => {
